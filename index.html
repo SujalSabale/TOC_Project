@@ -9,6 +9,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <!-- KaTeX for Professional Mathematical Typesetting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" crossorigin="anonymous">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" crossorigin="anonymous" onload="if (typeof renderMathInElement === 'function') renderMathInElement(document.body, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}], throwOnError: false });"></script>
 </head>
 <body>
   <div class="app-container">
@@ -16,7 +20,7 @@
     <header class="app-header">
       <div class="header-left">
         <div class="badge-tag">TOC CASE STUDY 10</div>
-        <h1>Recognition of Language <span class="formula-highlight">L = {aⁿbⁿ | n ≥ 1}</span></h1>
+        <h1>Recognition of Language <span class="formula-highlight">$L = \{a^n b^n \mid n \ge 1\}$</span></h1>
         <p class="subtitle">Context-Free Language Analysis • Turing Machine vs Pushdown Automaton • Pumping Lemma</p>
       </div>
       <div class="header-right">
@@ -307,7 +311,7 @@
         <div class="card tm-sidebar-card">
           <div class="card-header">
             <h3>📖 TM Transition Function $\delta(q, \sigma)$</h3>
-            <span class="badge">Alphabet: {a, b, X, Y, B}</span>
+            <span class="badge">Tape Alphabet $\Gamma = \{a, b, X, Y, B\}$</span>
           </div>
 
           <div class="table-responsive">
@@ -315,45 +319,45 @@
               <thead>
                 <tr>
                   <th>State</th>
-                  <th>Read 'a'</th>
-                  <th>Read 'b'</th>
-                  <th>Read 'X'</th>
-                  <th>Read 'Y'</th>
-                  <th>Read 'B' (Blank)</th>
+                  <th>Read $a$</th>
+                  <th>Read $b$</th>
+                  <th>Read $X$</th>
+                  <th>Read $Y$</th>
+                  <th>Read $B$ (Blank)</th>
                 </tr>
               </thead>
               <tbody>
                 <tr id="row-q0">
-                  <td class="state-cell">q₀ (Start)</td>
-                  <td id="cell-q0-a" data-trans="q0-a">(q₁, X, R)</td>
+                  <td class="state-cell">$q_0$ (Start)</td>
+                  <td id="cell-q0-a" data-trans="q0-a">$(q_1, X, R)$</td>
                   <td id="cell-q0-b" data-trans="q0-b">-</td>
                   <td id="cell-q0-X" data-trans="q0-X">-</td>
-                  <td id="cell-q0-Y" data-trans="q0-Y">(q₃, Y, R)</td>
+                  <td id="cell-q0-Y" data-trans="q0-Y">$(q_3, Y, R)$</td>
                   <td id="cell-q0-B" data-trans="q0-B">-</td>
                 </tr>
                 <tr id="row-q1">
-                  <td class="state-cell">q₁ (Seek 'b')</td>
-                  <td id="cell-q1-a" data-trans="q1-a">(q₁, a, R)</td>
-                  <td id="cell-q1-b" data-trans="q1-b">(q₂, Y, L)</td>
+                  <td class="state-cell">$q_1$ (Seek 'b')</td>
+                  <td id="cell-q1-a" data-trans="q1-a">$(q_1, a, R)$</td>
+                  <td id="cell-q1-b" data-trans="q1-b">$(q_2, Y, L)$</td>
                   <td id="cell-q1-X" data-trans="q1-X">-</td>
-                  <td id="cell-q1-Y" data-trans="q1-Y">(q₁, Y, R)</td>
+                  <td id="cell-q1-Y" data-trans="q1-Y">$(q_1, Y, R)$</td>
                   <td id="cell-q1-B" data-trans="q1-B">-</td>
                 </tr>
                 <tr id="row-q2">
-                  <td class="state-cell">q₂ (Rewind)</td>
-                  <td id="cell-q2-a" data-trans="q2-a">(q₂, a, L)</td>
+                  <td class="state-cell">$q_2$ (Rewind)</td>
+                  <td id="cell-q2-a" data-trans="q2-a">$(q_2, a, L)$</td>
                   <td id="cell-q2-b" data-trans="q2-b">-</td>
-                  <td id="cell-q2-X" data-trans="q2-X">(q₀, X, R)</td>
-                  <td id="cell-q2-Y" data-trans="q2-Y">(q₂, Y, L)</td>
+                  <td id="cell-q2-X" data-trans="q2-X">$(q_0, X, R)$</td>
+                  <td id="cell-q2-Y" data-trans="q2-Y">$(q_2, Y, L)$</td>
                   <td id="cell-q2-B" data-trans="q2-B">-</td>
                 </tr>
                 <tr id="row-q3">
-                  <td class="state-cell">q₃ (Check end)</td>
+                  <td class="state-cell">$q_3$ (Check end)</td>
                   <td id="cell-q3-a" data-trans="q3-a">-</td>
                   <td id="cell-q3-b" data-trans="q3-b">-</td>
                   <td id="cell-q3-X" data-trans="q3-X">-</td>
-                  <td id="cell-q3-Y" data-trans="q3-Y">(q₃, Y, R)</td>
-                  <td id="cell-q3-B" data-trans="q3-B">(q_acc, B, R)</td>
+                  <td id="cell-q3-Y" data-trans="q3-Y">$(q_3, Y, R)$</td>
+                  <td id="cell-q3-B" data-trans="q3-B">$(q_{\text{accept}}, B, R)$</td>
                 </tr>
               </tbody>
             </table>
@@ -437,10 +441,10 @@
               <div class="pda-rules-summary">
                 <h4>PDA Operation Philosophy:</h4>
                 <ul>
-                  <li><strong>For each 'a' scanned:</strong> PUSH 'A' onto the stack ($n$ counting phase).</li>
-                  <li><strong>For each 'b' scanned:</strong> POP 'A' off the stack (1-to-1 matching phase).</li>
-                  <li><strong>On empty input:</strong> If stack top is $Z_0$, transition to accepting state $q_f$.</li>
-                  <li><strong>Error condition:</strong> Popping on empty stack, reading 'a' after 'b', or stack non-empty at end.</li>
+                  <li><strong>For each symbol $a$ scanned:</strong> PUSH $A$ onto the stack ($n$ counting phase).</li>
+                  <li><strong>For each symbol $b$ scanned:</strong> POP $A$ off the stack ($1$-to-$1$ matching phase).</li>
+                  <li><strong>On empty input ($\epsilon$):</strong> If stack top is $Z_0$, transition to accepting state $q_f$.</li>
+                  <li><strong>Error condition:</strong> Popping on empty stack, reading $a$ after $b$, or stack non-empty at end.</li>
                 </ul>
               </div>
             </div>
@@ -450,7 +454,7 @@
           <div class="explanation-box" id="pdaExplanation">
             <div class="expl-icon">💡</div>
             <div class="expl-text" id="pdaExplText">
-              PDA initialized in state q₀. Input is ready for consumption.
+              PDA initialized in state $q_0$. Input is ready for consumption.
             </div>
           </div>
         </div>
@@ -459,7 +463,7 @@
         <div class="card pda-sidebar-card">
           <div class="card-header">
             <h3>📖 PDA Transition Function $\delta(q, \sigma, \text{top})$</h3>
-            <span class="badge">Stack Alphabet: {A, Z₀}</span>
+            <span class="badge">Stack Alphabet $\Gamma = \{A, Z_0\}$</span>
           </div>
 
           <div class="table-responsive">
@@ -477,43 +481,43 @@
               <tbody>
                 <tr id="pda-rule-1">
                   <td>R1</td>
-                  <td>q₀</td>
-                  <td>a</td>
-                  <td>Z₀</td>
-                  <td>q₁</td>
-                  <td>Push A (AZ₀)</td>
+                  <td>$q_0$</td>
+                  <td>$a$</td>
+                  <td>$Z_0$</td>
+                  <td>$q_1$</td>
+                  <td>Push $A$ ($AZ_0$)</td>
                 </tr>
                 <tr id="pda-rule-2">
                   <td>R2</td>
-                  <td>q₁</td>
-                  <td>a</td>
-                  <td>A</td>
-                  <td>q₁</td>
-                  <td>Push A (AA)</td>
+                  <td>$q_1$</td>
+                  <td>$a$</td>
+                  <td>$A$</td>
+                  <td>$q_1$</td>
+                  <td>Push $A$ ($AA$)</td>
                 </tr>
                 <tr id="pda-rule-3">
                   <td>R3</td>
-                  <td>q₁</td>
-                  <td>b</td>
-                  <td>A</td>
-                  <td>q₂</td>
-                  <td>Pop A (ε)</td>
+                  <td>$q_1$</td>
+                  <td>$b$</td>
+                  <td>$A$</td>
+                  <td>$q_2$</td>
+                  <td>Pop $A$ ($\epsilon$)</td>
                 </tr>
                 <tr id="pda-rule-4">
                   <td>R4</td>
-                  <td>q₂</td>
-                  <td>b</td>
-                  <td>A</td>
-                  <td>q₂</td>
-                  <td>Pop A (ε)</td>
+                  <td>$q_2$</td>
+                  <td>$b$</td>
+                  <td>$A$</td>
+                  <td>$q_2$</td>
+                  <td>Pop $A$ ($\epsilon$)</td>
                 </tr>
                 <tr id="pda-rule-5">
                   <td>R5</td>
-                  <td>q₂</td>
-                  <td>ε (End)</td>
-                  <td>Z₀</td>
-                  <td>q_f</td>
-                  <td>Accept (Keep Z₀)</td>
+                  <td>$q_2$</td>
+                  <td>$\epsilon$ (End)</td>
+                  <td>$Z_0$</td>
+                  <td>$q_f$</td>
+                  <td>Accept (Keep $Z_0$)</td>
                 </tr>
               </tbody>
             </table>
@@ -537,11 +541,11 @@
         <div class="compare-stats-grid">
           <div class="compare-stat-pill">
             <span class="name">Turing Machine (1-Tape)</span>
-            <span class="val">Time Complexity: <strong class="text-cyan">O(n²)</strong> • Space: <strong class="text-cyan">O(n)</strong></span>
+            <span class="val">Time Complexity: <strong class="text-cyan">$O(n^2)$</strong> • Space: <strong class="text-cyan">$O(n)$</strong></span>
           </div>
           <div class="compare-stat-pill">
             <span class="name">Pushdown Automaton (PDA)</span>
-            <span class="val">Time Complexity: <strong class="text-emerald">O(n)</strong> • Space: <strong class="text-emerald">O(n)</strong></span>
+            <span class="val">Time Complexity: <strong class="text-emerald">$O(n)$</strong> • Space: <strong class="text-emerald">$O(n)$</strong></span>
           </div>
         </div>
       </div>
@@ -689,15 +693,15 @@
               <p><strong>1. Assumption:</strong> Assume for contradiction that $L = \{a^n b^n \mid n \ge 1\}$ is regular.</p>
               <p><strong>2. Pumping Length:</strong> Let $p$ be the pumping length guaranteed by the Pumping Lemma.</p>
               <p><strong>3. Choice of String:</strong> Choose the string $s = a^p b^p$. Notice that $s \in L$ and $|s| = 2p \ge p$.</p>
-              <p><strong>4. Decomposition:</strong> By Condition 2 ($|xy| \le p$), the substring $xy$ must consist exclusively of the prefix $a^p$. Therefore, $y$ can only contain symbol $a$. We can write:</p>
+              <p><strong>4. Decomposition:</strong> By Condition 2 ($|xy| \le p$), the substring $xy$ must consist exclusively of the prefix $a^p$. Therefore, $y$ can only contain the symbol $a$. We can write:</p>
               <div class="math-block">
-                $$y = a^k \quad \text{for some } k \ge 1 \text{ (since } |y| > 0 \text{)}$$
+                $$y = a^k \quad \text{for some } k \ge 1 \text{ (since } |y| > 0\text{)}$$
               </div>
               <p><strong>5. Pumping with $i = 2$ (or $i = 0$):</strong> Consider the pumped string $s' = x y^2 z$:</p>
               <div class="math-block">
                 $$s' = x y y z = a^{p-k} a^{2k} b^p = a^{p+k} b^p$$
               </div>
-              <p><strong>6. Contradiction:</strong> In $s'$, the number of $a$'s is $p+k$, but the number of $b$'s is $p$. Since $k \ge 1$, $p+k \ne p$. Therefore, $s' \notin L$, which directly violates Condition 3 of the Pumping Lemma!</p>
+              <p><strong>6. Contradiction:</strong> In $s'$, the number of symbol $a$'s is $p+k$, but the number of symbol $b$'s is $p$. Since $k \ge 1$, $p+k \ne p$. Therefore, $s' \notin L$, which directly violates Condition 3 of the Pumping Lemma!</p>
               <p><strong>Conclusion:</strong> The assumption that $L$ is regular is false. Hence, <strong>$L$ is not regular</strong> and cannot be recognized by any DFA or NFA.</p>
             </div>
           </div>
@@ -713,29 +717,29 @@
           <div class="grid-2col">
             <div class="tuple-box">
               <h3>Turing Machine 7-Tuple</h3>
-              <p class="font-mono">M = (Q, Σ, Γ, δ, q₀, B, F)</p>
+              <p class="font-mono">$M = (Q, \Sigma, \Gamma, \delta, q_0, B, F)$</p>
               <ul>
-                <li><strong>Q (States):</strong> $\{q_0, q_1, q_2, q_3, q_{\text{accept}}\}$</li>
-                <li><strong>Σ (Input Alphabet):</strong> $\{a, b\}$</li>
-                <li><strong>Γ (Tape Alphabet):</strong> $\{a, b, X, Y, B\}$</li>
-                <li><strong>δ (Transition Function):</strong> $Q \times \Gamma \to Q \times \Gamma \times \{L, R\}$</li>
-                <li><strong>q₀ (Initial State):</strong> $q_0$</li>
-                <li><strong>B (Blank Symbol):</strong> $B$</li>
-                <li><strong>F (Final/Accepting States):</strong> $\{q_{\text{accept}}\}$</li>
+                <li><strong>$Q$ (States):</strong> $\{q_0, q_1, q_2, q_3, q_{\text{accept}}\}$</li>
+                <li><strong>$\Sigma$ (Input Alphabet):</strong> $\{a, b\}$</li>
+                <li><strong>$\Gamma$ (Tape Alphabet):</strong> $\{a, b, X, Y, B\}$</li>
+                <li><strong>$\delta$ (Transition Function):</strong> $\delta: Q \times \Gamma \to Q \times \Gamma \times \{L, R\}$</li>
+                <li><strong>$q_0$ (Initial State):</strong> $q_0$</li>
+                <li><strong>$B$ (Blank Symbol):</strong> $B$</li>
+                <li><strong>$F$ (Final/Accepting States):</strong> $\{q_{\text{accept}}\}$</li>
               </ul>
             </div>
 
             <div class="tuple-box">
               <h3>Pushdown Automaton 7-Tuple</h3>
-              <p class="font-mono">P = (Q, Σ, Γ, δ, q₀, Z₀, F)</p>
+              <p class="font-mono">$P = (Q, \Sigma, \Gamma, \delta, q_0, Z_0, F)$</p>
               <ul>
-                <li><strong>Q (States):</strong> $\{q_0, q_1, q_2, q_f\}$</li>
-                <li><strong>Σ (Input Alphabet):</strong> $\{a, b\}$</li>
-                <li><strong>Γ (Stack Alphabet):</strong> $\{A, Z_0\}$</li>
-                <li><strong>δ (Transition Function):</strong> $Q \times (\Sigma \cup \{\epsilon\}) \times \Gamma \to \mathcal{P}(Q \times \Gamma^*)$</li>
-                <li><strong>q₀ (Initial State):</strong> $q_0$</li>
-                <li><strong>Z₀ (Initial Stack Symbol):</strong> $Z_0$</li>
-                <li><strong>F (Final States):</strong> $\{q_f\}$</li>
+                <li><strong>$Q$ (States):</strong> $\{q_0, q_1, q_2, q_f\}$</li>
+                <li><strong>$\Sigma$ (Input Alphabet):</strong> $\{a, b\}$</li>
+                <li><strong>$\Gamma$ (Stack Alphabet):</strong> $\{A, Z_0\}$</li>
+                <li><strong>$\delta$ (Transition Function):</strong> $\delta: Q \times (\Sigma \cup \{\epsilon\}) \times \Gamma \to \mathcal{P}(Q \times \Gamma^*)$</li>
+                <li><strong>$q_0$ (Initial State):</strong> $q_0$</li>
+                <li><strong>$Z_0$ (Initial Stack Symbol):</strong> $Z_0$</li>
+                <li><strong>$F$ (Final States):</strong> $\{q_f\}$</li>
               </ul>
             </div>
           </div>
@@ -752,21 +756,21 @@
             <details class="faq-item" open>
               <summary><strong>Q1: Why can't a Finite Automaton recognize $L = \{a^n b^n \mid n \ge 1\}$?</strong></summary>
               <div class="faq-content">
-                A Finite Automaton has a strictly finite set of internal states (no external memory or stack). To recognize $a^n b^n$, it must count an arbitrarily large number of $a$'s to ensure an identical number of $b$'s follow. Since $n$ can be arbitrarily large (e.g. $n = 10^9$), by the Pigeonhole Principle the automaton will be forced to loop into already visited states and lose the exact count of $a$'s.
+                A Finite Automaton has a strictly finite set of internal states (no external memory or stack). To recognize $a^n b^n$, it must count an arbitrarily large number of symbols $a$ to ensure an identical number of symbols $b$ follow. Since $n$ can be arbitrarily large (e.g., $n = 10^9$), by the Pigeonhole Principle the automaton will be forced to loop into already visited states and lose the exact count of symbol $a$.
               </div>
             </details>
 
             <details class="faq-item">
               <summary><strong>Q2: Why is the time complexity of the 1-Tape Turing Machine $O(n^2)$ for this language?</strong></summary>
               <div class="faq-content">
-                For each $a$ that the TM marks as $X$, the tape head must traverse all remaining $a$'s and existing $Y$'s to find and cross the matching $b$ with $Y$ (distance roughly $2n$). Then the head must rewind all the way back to the left $X$. This round-trip takes $O(n)$ steps per matching pair. Since there are $n$ pairs, the total time is $O(n \times n) = O(n^2)$.
+                For each symbol $a$ that the TM marks as $X$, the tape head must traverse all remaining symbol $a$'s and existing $Y$'s to find and cross the matching $b$ with $Y$ (distance roughly $2n$). Then the head must rewind all the way back to the left $X$. This round-trip takes $O(n)$ steps per matching pair. Since there are $n$ pairs, the total time is $O(n \times n) = O(n^2)$.
               </div>
             </details>
 
             <details class="faq-item">
               <summary><strong>Q3: How does a Pushdown Automaton achieve $O(n)$ time complexity?</strong></summary>
               <div class="faq-content">
-                A PDA processes the input string from left to right in a single linear pass. Each $a$ is pushed onto the stack in $O(1)$ time, and each $b$ pops an $a$ in $O(1)$ time. At the end, a single check verifies that the stack contains only the bottom marker $Z_0$. Thus, total operations $= 2n$ transitions, resulting in optimal $O(n)$ linear time.
+                A PDA processes the input string from left to right in a single linear pass. Each symbol $a$ is pushed onto the stack in $O(1)$ time, and each symbol $b$ pops an $a$ in $O(1)$ time. At the end, a single check verifies that the stack contains only the bottom marker $Z_0$. Thus, total operations $= 2n$ transitions, resulting in optimal $O(n)$ linear time.
               </div>
             </details>
 
