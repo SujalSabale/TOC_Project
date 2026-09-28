@@ -388,6 +388,12 @@
             </div>
           </div>
 
+          <!-- Prominent PDA Result Banner -->
+          <div class="tm-result-banner" id="pdaResultBanner" style="display: none;">
+            <div class="result-banner-icon" id="pdaResultBannerIcon">✓</div>
+            <div class="result-banner-content" id="pdaResultBannerContent"></div>
+          </div>
+
           <!-- State Metrics -->
           <div class="state-metrics-bar">
             <div class="metric-box">
@@ -536,8 +542,16 @@
     <!-- TAB 3: Dual Simulator (Side-by-Side Comparison) -->
     <section class="tab-content" id="content-compare">
       <div class="compare-header-card card">
-        <h2>⚡ Turing Machine vs Pushdown Automaton: Parallel Execution</h2>
-        <p>Watch both automata process the exact same input string concurrently to observe the fundamental computational difference:</p>
+        <div class="compare-header-top">
+          <div>
+            <h2>⚡ Turing Machine vs Pushdown Automaton: Parallel Execution</h2>
+            <p>Watch both automata process the exact same input string concurrently to observe the fundamental computational difference:</p>
+          </div>
+          <div class="dual-status-summary">
+            <span class="status-pill status-ready" id="dualGlobalStatus">Dual Simulator: Ready</span>
+          </div>
+        </div>
+
         <div class="compare-stats-grid">
           <div class="compare-stat-pill">
             <span class="name">Turing Machine (1-Tape)</span>
@@ -548,37 +562,160 @@
             <span class="val">Time Complexity: <strong class="text-emerald">$O(n)$</strong> • Space: <strong class="text-emerald">$O(n)$</strong></span>
           </div>
         </div>
+
+        <!-- Dedicated Dual Simulator Controls Toolbar -->
+        <div class="dual-toolbar">
+          <div class="btn-cluster">
+            <button class="btn btn-primary" id="btnDualRun" title="Automatically execute both machines step-by-step">
+              <span id="dualRunIcon">▶</span> <span id="dualRunText">Run Both</span>
+            </button>
+            <button class="btn btn-action" id="btnDualStep" title="Execute exactly ONE transition on both machines">
+              <span>⏭</span> Step Both
+            </button>
+            <button class="btn btn-action" id="btnDualPause" title="Pause automatic execution">
+              <span>⏸</span> Pause
+            </button>
+            <button class="btn btn-action" id="btnDualReset" title="Reset both machines to initial configuration">
+              <span>↻</span> Reset Both
+            </button>
+          </div>
+          <div class="dual-input-indicator">
+            <span class="indicator-label">Shared Input String:</span>
+            <span class="indicator-value font-mono" id="dualInputDisplay">"aabb"</span>
+          </div>
+        </div>
       </div>
 
-      <div class="grid-2col">
-        <!-- TM Mini Visualizer -->
-        <div class="card mini-visualizer">
+      <div class="grid-2col dual-grid">
+        <!-- TM View (Left Column) -->
+        <div class="card dual-panel dual-tm-panel">
           <div class="card-header">
-            <h3>📼 Turing Machine View</h3>
-            <span class="badge" id="compareTmStatus">Ready</span>
+            <div class="panel-title-wrap">
+              <span class="panel-icon">📼</span>
+              <h3>Turing Machine View</h3>
+            </div>
+            <span class="status-pill status-ready" id="compareTmStatus">Ready</span>
           </div>
-          <div class="tape-track mini" id="compareTapeTrack"></div>
-          <div class="mini-metrics">
-            <span>State: <strong id="compareTmState">q₀</strong></span>
-            <span>Steps: <strong id="compareTmSteps">0</strong></span>
-            <span>Head: Cell <strong id="compareTmHead">0</strong></span>
+
+          <!-- TM Metrics Row -->
+          <div class="dual-metrics-grid">
+            <div class="d-metric">
+              <span class="d-label">STATE</span>
+              <span class="d-val highlight-state" id="compareTmState">q₀</span>
+            </div>
+            <div class="d-metric">
+              <span class="d-label">STEP</span>
+              <span class="d-val" id="compareTmSteps">0</span>
+            </div>
+            <div class="d-metric">
+              <span class="d-label">HEAD</span>
+              <span class="d-val font-mono" id="compareTmHead">Cell 0</span>
+            </div>
+            <div class="d-metric">
+              <span class="d-label">SCANNED</span>
+              <span class="d-val font-mono" id="compareTmScanned">'a'</span>
+            </div>
           </div>
-          <div class="mini-trace" id="compareTmTrace">Ready to start.</div>
+
+          <!-- TM Tape Viewport with Head Indicator -->
+          <div class="dual-tape-wrap">
+            <div class="tape-label-mini">Tape & Head Position:</div>
+            <div class="tape-track mini" id="compareTapeTrack"></div>
+          </div>
+
+          <!-- TM Transition & Operation Cards -->
+          <div class="dual-action-box">
+            <div class="action-sub-item">
+              <span class="sub-label">Current Transition:</span>
+              <span class="sub-val font-mono" id="compareTmTransition">$\delta(q_0, a) \to (q_1, X, R)$</span>
+            </div>
+            <div class="action-sub-item">
+              <span class="sub-label">Last Operation:</span>
+              <span class="sub-val" id="compareTmLastOp">Initialized at cell 0</span>
+            </div>
+          </div>
+
+          <!-- TM Execution Trace Log -->
+          <div class="dual-trace-section">
+            <div class="trace-mini-header">
+              <span>TM Step Log</span>
+              <span class="badge" id="compareTmLogCount">0 steps</span>
+            </div>
+            <div class="trace-log-wrap mini-log" id="compareTmLog"></div>
+          </div>
         </div>
 
-        <!-- PDA Mini Visualizer -->
-        <div class="card mini-visualizer">
+        <!-- PDA View (Right Column) -->
+        <div class="card dual-panel dual-pda-panel">
           <div class="card-header">
-            <h3>🥞 Pushdown Automaton View</h3>
-            <span class="badge" id="comparePdaStatus">Ready</span>
+            <div class="panel-title-wrap">
+              <span class="panel-icon">🥞</span>
+              <h3>Pushdown Automaton View</h3>
+            </div>
+            <span class="status-pill status-ready" id="comparePdaStatus">Ready</span>
           </div>
-          <div class="mini-stack-display" id="comparePdaStack"></div>
-          <div class="mini-metrics">
-            <span>State: <strong id="comparePdaState">q₀</strong></span>
-            <span>Steps: <strong id="comparePdaSteps">0</strong></span>
-            <span>Stack Height: <strong id="comparePdaHeight">1</strong></span>
+
+          <!-- PDA Metrics Row -->
+          <div class="dual-metrics-grid">
+            <div class="d-metric">
+              <span class="d-label">STATE</span>
+              <span class="d-val highlight-state" id="comparePdaState">q₀</span>
+            </div>
+            <div class="d-metric">
+              <span class="d-label">STEP</span>
+              <span class="d-val" id="comparePdaSteps">0</span>
+            </div>
+            <div class="d-metric">
+              <span class="d-label">INPUT POS</span>
+              <span class="d-val font-mono" id="comparePdaPos">Index 0</span>
+            </div>
+            <div class="d-metric">
+              <span class="d-label">CURRENT CHAR</span>
+              <span class="d-val font-mono" id="comparePdaChar">'a'</span>
+            </div>
           </div>
-          <div class="mini-trace" id="comparePdaTrace">Ready to start.</div>
+
+          <!-- PDA Input Stream with Animated Moving Pointer -->
+          <div class="dual-pda-stream-wrap">
+            <div class="stream-label-mini">Input Stream & Current Pointer:</div>
+            <div class="pda-stream-track" id="comparePdaStream"></div>
+          </div>
+
+          <!-- PDA Vertical Visual Stack & Operation Details -->
+          <div class="dual-pda-middle-grid">
+            <!-- Vertical Stack Column -->
+            <div class="vertical-stack-wrapper">
+              <div class="stack-top-label">
+                <span class="arrow-down">⬇</span> TOP: <strong id="comparePdaTop">Z₀</strong> (Height: <span id="comparePdaHeight">1</span>)
+              </div>
+              <div class="vertical-stack-container" id="comparePdaStackChamber">
+                <!-- Stack blocks rendered from top to bottom -->
+              </div>
+              <div class="vertical-stack-base">STACK BASE</div>
+            </div>
+
+            <!-- PDA Action Details -->
+            <div class="dual-pda-action-details">
+              <div class="action-sub-item">
+                <span class="sub-label">Current Transition:</span>
+                <span class="sub-val font-mono" id="comparePdaTransition">$\delta(q_0, a, Z_0) \to (q_1, AZ_0)$</span>
+              </div>
+              <div class="action-sub-item">
+                <span class="sub-label">Last Operation:</span>
+                <div class="op-badge-inline" id="comparePdaOpBadge">INIT</div>
+                <span class="sub-val" id="comparePdaLastOp">Initialized with Z₀</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- PDA Execution Trace Log -->
+          <div class="dual-trace-section">
+            <div class="trace-mini-header">
+              <span>PDA Step Log</span>
+              <span class="badge" id="comparePdaLogCount">0 steps</span>
+            </div>
+            <div class="trace-log-wrap mini-log" id="comparePdaLog"></div>
+          </div>
         </div>
       </div>
     </section>

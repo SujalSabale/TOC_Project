@@ -389,80 +389,144 @@ class PushdownAutomaton {
     return this.chars[this.inputIndex];
   }
 
-  step() {
-    if (this.status === 'ACCEPTED' || this.status === 'REJECTED') {
-      return false;
+  getNextAction() {
+    if (this.status === 'ACCEPTED') {
+      return { type: 'ACCEPT', nextState: 'q_f', text: 'Halted (ACCEPT)', transition: 'Final state reached (ACCEPTED)', desc: 'String accepted by Pushdown Automaton' };
+    }
+    if (this.status === 'REJECTED') {
+      return { type: 'REJECT', nextState: 'q_reject', text: 'Halted (REJECT)', transition: 'Rejected (Halted in q_rej)', desc: this.lastOp.desc || 'String rejected' };
     }
 
     const currChar = this.getNextInputChar();
     const top = this.getTop();
     const currState = this.state;
+
+    // Rule 1: δ(q0, a, Z0) -> (q1, AZ0) [First 'a']
+    if (currState === 'q0' && currChar === 'a' && top === 'Z₀') {
+      return {
+        type: 'PUSH',
+        nextState: 'q1',
+        pushSymbol: 'A',
+        ruleId: 'pda-rule-1',
+        text: 'PUSH A',
+        transition: 'δ(q₀, a, Z₀) → (q₁, AZ₀)',
+        desc: "Read first 'a', push 'A' onto stack, move to q₁"
+      };
+    }
+
+    // Rule 2: δ(q1, a, A) -> (q1, AA) [Subsequent 'a's]
+    if (currState === 'q1' && currChar === 'a' && top === 'A') {
+      return {
+        type: 'PUSH',
+        nextState: 'q1',
+        pushSymbol: 'A',
+        ruleId: 'pda-rule-2',
+        text: 'PUSH A',
+        transition: 'δ(q₁, a, A) → (q₁, AA)',
+        desc: `Read 'a', push 'A' onto stack (total A's: ${this.stack.length})`
+      };
+    }
+
+    // Rule 3: δ(q1, b, A) -> (q2, ε) [First 'b']
+    if (currState === 'q1' && currChar === 'b' && top === 'A') {
+      return {
+        type: 'POP',
+        nextState: 'q2',
+        popSymbol: 'A',
+        ruleId: 'pda-rule-3',
+        text: 'POP A',
+        transition: 'δ(q₁, b, A) → (q₂, ε)',
+        desc: "Read first 'b', pop 'A' off stack, transition to q₂"
+      };
+    }
+
+    // Rule 4: δ(q2, b, A) -> (q2, ε) [Subsequent 'b's]
+    if (currState === 'q2' && currChar === 'b' && top === 'A') {
+      return {
+        type: 'POP',
+        nextState: 'q2',
+        popSymbol: 'A',
+        ruleId: 'pda-rule-4',
+        text: 'POP A',
+        transition: 'δ(q₂, b, A) → (q₂, ε)',
+        desc: "Read 'b', pop matching 'A' off stack"
+      };
+    }
+
+    // Rule 5: δ(q2, ε, Z0) -> (q_f, Z0) [Acceptance at end of string]
+    if (currState === 'q2' && currChar === 'ε' && top === 'Z₀') {
+      return {
+        type: 'ACCEPT',
+        nextState: 'q_f',
+        ruleId: 'pda-rule-5',
+        text: 'ACCEPT',
+        transition: 'δ(q₂, ε, Z₀) → (q_f, Z₀)',
+        desc: "Input exhausted & stack contains only Z₀. ACCEPTED!"
+      };
+    }
+
+    // Rejection reasons:
+    let rejectDesc = 'Unexpected symbol or empty stack';
+    if (currChar === 'ε' && currState === 'q0') {
+      rejectDesc = 'Empty string ε (n=0 not permitted for n ≥ 1)';
+    } else if (currChar === 'ε' && top !== 'Z₀') {
+      rejectDesc = `Input ended prematurely with ${this.stack.length - 1} unpopped 'A'(s) on stack (more a's than b's)`;
+    } else if (currChar === 'b' && top === 'Z₀') {
+      rejectDesc = "Read 'b' with stack empty (more b's than a's or b's before a's)";
+    } else if (currChar === 'a' && currState === 'q2') {
+      rejectDesc = "Read 'a' after 'b' (violates aⁿbⁿ ordering)";
+    } else if (!['a', 'b', 'ε'].includes(currChar)) {
+      rejectDesc = `Invalid character '${currChar}' or unexpected token`;
+    }
+
+    return {
+      type: 'REJECT',
+      nextState: 'q_reject',
+      ruleId: null,
+      text: 'REJECT',
+      transition: `δ(${currState}, ${currChar}, ${top || '∅'}) → Undefined`,
+      desc: `Rejected: ${rejectDesc}`
+    };
+  }
+
+  step() {
+    if (this.status === 'ACCEPTED' || this.status === 'REJECTED') {
+      return false;
+    }
+
+    const action = this.getNextAction();
+    const currChar = this.getNextInputChar();
+    const top = this.getTop();
+    const currState = this.state;
     this.stepCount++;
 
-    // PDA Rule 1: δ(q0, a, Z0) -> (q1, AZ0) [First 'a']
-    if (currState === 'q0' && currChar === 'a' && top === 'Z₀') {
-      this.stack.push('A');
+    if (action.type === 'PUSH') {
+      this.stack.push(action.pushSymbol);
       this.inputIndex++;
-      this.state = 'q1';
+      this.state = action.nextState;
       this.status = 'RUNNING';
-      this.activeRuleId = 'pda-rule-1';
-      this.lastOp = { type: 'PUSH', desc: `Read first 'a', pushed 'A' onto stack, moved to q₁` };
+      this.activeRuleId = action.ruleId;
+      this.lastOp = { type: 'PUSH A', desc: action.desc, transition: action.transition };
       sound.playStackPush();
-    }
-    // PDA Rule 2: δ(q1, a, A) -> (q1, AA) [Subsequent 'a's]
-    else if (currState === 'q1' && currChar === 'a' && top === 'A') {
-      this.stack.push('A');
-      this.inputIndex++;
-      this.state = 'q1';
-      this.status = 'RUNNING';
-      this.activeRuleId = 'pda-rule-2';
-      this.lastOp = { type: 'PUSH', desc: `Read 'a', pushed 'A' onto stack (total A's: ${this.stack.length - 1})` };
-      sound.playStackPush();
-    }
-    // PDA Rule 3: δ(q1, b, A) -> (q2, ε) [First 'b']
-    else if (currState === 'q1' && currChar === 'b' && top === 'A') {
+    } else if (action.type === 'POP') {
       this.stack.pop();
       this.inputIndex++;
-      this.state = 'q2';
+      this.state = action.nextState;
       this.status = 'RUNNING';
-      this.activeRuleId = 'pda-rule-3';
-      this.lastOp = { type: 'POP', desc: `Read first 'b', popped 'A' off stack, transitioned to q₂` };
+      this.activeRuleId = action.ruleId;
+      this.lastOp = { type: 'POP A', desc: action.desc, transition: action.transition };
       sound.playStackPop();
-    }
-    // PDA Rule 4: δ(q2, b, A) -> (q2, ε) [Subsequent 'b's]
-    else if (currState === 'q2' && currChar === 'b' && top === 'A') {
-      this.stack.pop();
-      this.inputIndex++;
-      this.state = 'q2';
-      this.status = 'RUNNING';
-      this.activeRuleId = 'pda-rule-4';
-      this.lastOp = { type: 'POP', desc: `Read 'b', popped matching 'A' off stack` };
-      sound.playStackPop();
-    }
-    // PDA Rule 5: δ(q2, ε, Z0) -> (q_f, Z0) [Acceptance at end of string]
-    else if (currState === 'q2' && currChar === 'ε' && top === 'Z₀') {
-      this.state = 'q_f';
+    } else if (action.type === 'ACCEPT') {
+      this.state = action.nextState;
       this.status = 'ACCEPTED';
-      this.activeRuleId = 'pda-rule-5';
-      this.lastOp = { type: 'ACCEPT', desc: `Input exhausted & stack contains only Z₀. Transitioned to q_f. ACCEPTED!` };
+      this.activeRuleId = action.ruleId;
+      this.lastOp = { type: 'ACCEPT', desc: action.desc, transition: action.transition };
       sound.playAccept();
-    }
-    // Rejections:
-    else {
+    } else {
       this.state = 'q_reject';
       this.status = 'REJECTED';
       this.activeRuleId = null;
-      if (currChar === 'ε' && currState === 'q0') {
-        this.lastOp = { type: 'REJECT', desc: `Rejected: Empty string (n=0 not permitted for n ≥ 1)` };
-      } else if (currChar === 'ε' && top !== 'Z₀') {
-        this.lastOp = { type: 'REJECT', desc: `Rejected: Input ended prematurely with ${this.stack.length - 1} unpopped 'A'(s) on stack (more a's than b's)` };
-      } else if (currChar === 'b' && top === 'Z₀') {
-        this.lastOp = { type: 'REJECT', desc: `Rejected: Read 'b' with stack empty (more b's than a's or b's before a's)` };
-      } else if (currChar === 'a' && currState === 'q2') {
-        this.lastOp = { type: 'REJECT', desc: `Rejected: Read 'a' after 'b' (violates aⁿbⁿ ordering)` };
-      } else {
-        this.lastOp = { type: 'REJECT', desc: `Rejected: Invalid character '${currChar}' or unexpected token` };
-      }
+      this.lastOp = { type: 'REJECT', desc: action.desc, transition: action.transition };
       sound.playReject();
     }
 
@@ -473,7 +537,8 @@ class PushdownAutomaton {
       nextState: this.state,
       top: top,
       op: this.lastOp.type,
-      desc: this.lastOp.desc,
+      desc: `Step ${this.stepCount}: ${currState} + '${currChar}' + ${top} → ${this.lastOp.type} (${this.state})`,
+      transition: this.lastOp.transition,
       status: this.status
     };
     this.traceLog.push(logEntry);
@@ -655,19 +720,48 @@ class AppController {
     this.pdaTraceLog = document.getElementById('pdaTraceLog');
     this.pdaLogCount = document.getElementById('pdaLogCount');
 
-    // Compare Tab DOM
+    // Standalone PDA Result Banner DOM
+    this.pdaResultBanner = document.getElementById('pdaResultBanner');
+    this.pdaResultBannerContent = document.getElementById('pdaResultBannerContent');
+    this.pdaResultBannerIcon = document.getElementById('pdaResultBannerIcon');
+
+    // Dual Simulator (Compare Tab) Toolbar & Controls DOM
+    this.btnDualRun = document.getElementById('btnDualRun');
+    this.btnDualStep = document.getElementById('btnDualStep');
+    this.btnDualPause = document.getElementById('btnDualPause');
+    this.btnDualReset = document.getElementById('btnDualReset');
+    this.dualRunIcon = document.getElementById('dualRunIcon');
+    this.dualRunText = document.getElementById('dualRunText');
+    this.dualGlobalStatus = document.getElementById('dualGlobalStatus');
+    this.dualInputDisplay = document.getElementById('dualInputDisplay');
+
+    // Dual Simulator TM Panel DOM
     this.compareTapeTrack = document.getElementById('compareTapeTrack');
-    this.comparePdaStack = document.getElementById('comparePdaStack');
     this.compareTmStatus = document.getElementById('compareTmStatus');
-    this.comparePdaStatus = document.getElementById('comparePdaStatus');
     this.compareTmState = document.getElementById('compareTmState');
     this.compareTmSteps = document.getElementById('compareTmSteps');
     this.compareTmHead = document.getElementById('compareTmHead');
-    this.compareTmTrace = document.getElementById('compareTmTrace');
+    this.compareTmScanned = document.getElementById('compareTmScanned');
+    this.compareTmTransition = document.getElementById('compareTmTransition');
+    this.compareTmLastOp = document.getElementById('compareTmLastOp');
+    this.compareTmLog = document.getElementById('compareTmLog');
+    this.compareTmLogCount = document.getElementById('compareTmLogCount');
+
+    // Dual Simulator PDA Panel DOM
+    this.comparePdaStatus = document.getElementById('comparePdaStatus');
     this.comparePdaState = document.getElementById('comparePdaState');
     this.comparePdaSteps = document.getElementById('comparePdaSteps');
+    this.comparePdaPos = document.getElementById('comparePdaPos');
+    this.comparePdaChar = document.getElementById('comparePdaChar');
+    this.comparePdaStream = document.getElementById('comparePdaStream');
+    this.comparePdaTop = document.getElementById('comparePdaTop');
     this.comparePdaHeight = document.getElementById('comparePdaHeight');
-    this.comparePdaTrace = document.getElementById('comparePdaTrace');
+    this.comparePdaStackChamber = document.getElementById('comparePdaStackChamber');
+    this.comparePdaTransition = document.getElementById('comparePdaTransition');
+    this.comparePdaOpBadge = document.getElementById('comparePdaOpBadge');
+    this.comparePdaLastOp = document.getElementById('comparePdaLastOp');
+    this.comparePdaLog = document.getElementById('comparePdaLog');
+    this.comparePdaLogCount = document.getElementById('comparePdaLogCount');
 
     // Batch Tab DOM
     this.batchTableBody = document.getElementById('batchTableBody');
@@ -735,7 +829,10 @@ class AppController {
 
     // Playback Controls
     if (this.btnRunTM) {
-      this.btnRunTM.addEventListener('click', () => this.runTM());
+      this.btnRunTM.addEventListener('click', () => {
+        if (this.isPlaying) this.pause();
+        else this.runTM();
+      });
     }
     if (this.btnPause) {
       this.btnPause.addEventListener('click', () => this.pause());
@@ -744,6 +841,23 @@ class AppController {
     this.btnStepBack.addEventListener('click', () => this.stepBackward());
     this.btnReset.addEventListener('click', () => this.resetSimulators());
     this.btnFastRun.addEventListener('click', () => this.fastRun());
+
+    // Dual Simulator Dedicated Toolbar Events
+    if (this.btnDualRun) {
+      this.btnDualRun.addEventListener('click', () => {
+        if (this.isPlaying) this.pause();
+        else this.runBoth();
+      });
+    }
+    if (this.btnDualStep) {
+      this.btnDualStep.addEventListener('click', () => this.stepBoth());
+    }
+    if (this.btnDualPause) {
+      this.btnDualPause.addEventListener('click', () => this.pause());
+    }
+    if (this.btnDualReset) {
+      this.btnDualReset.addEventListener('click', () => this.resetSimulators());
+    }
 
     // Speed Slider
     this.speedSlider.addEventListener('input', (e) => {
@@ -790,9 +904,35 @@ class AppController {
     this.tabContents.forEach(content => {
       content.classList.toggle('active', content.id === `content-${tabId}`);
     });
+
+    // When switching to the Dual Simulator, ensure both machines start from synchronized state
+    if (tabId === 'compare') {
+      const tmHalted = this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED';
+      const pdaHalted = this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED';
+      if ((tmHalted && !pdaHalted) || (!tmHalted && pdaHalted) || (tmHalted && pdaHalted)) {
+        this.resetSimulators();
+      }
+    }
+
+    this.updateControlsForPlayState();
     this.render();
     const activeSection = document.getElementById(`content-${tabId}`);
     if (activeSection) renderMathSafely(activeSection);
+  }
+
+  updateControlsForPlayState() {
+    const playLabel = this.currentTab === 'compare' ? 'Both' : (this.currentTab === 'pda' ? 'PDA' : 'TM');
+    if (this.isPlaying) {
+      if (this.runIcon) this.runIcon.textContent = '⏸';
+      if (this.runText) this.runText.textContent = `Pause ${playLabel}`;
+      if (this.dualRunIcon) this.dualRunIcon.textContent = '⏸';
+      if (this.dualRunText) this.dualRunText.textContent = 'Pause';
+    } else {
+      if (this.runIcon) this.runIcon.textContent = '▶';
+      if (this.runText) this.runText.textContent = `Run ${playLabel}`;
+      if (this.dualRunIcon) this.dualRunIcon.textContent = '▶';
+      if (this.dualRunText) this.dualRunText.textContent = 'Run Both';
+    }
   }
 
   loadString(str) {
@@ -812,19 +952,31 @@ class AppController {
 
   stepForward() {
     let moved = false;
-    if (this.currentTab === 'tm' || this.currentTab === 'compare') {
-      moved = this.tm.step() || moved;
-    }
-    if (this.currentTab === 'pda' || this.currentTab === 'compare') {
-      moved = this.pda.step() || moved;
-    }
-    if (this.currentTab === 'batch' || this.currentTab === 'theory') {
-      this.tm.step();
-      this.pda.step();
-      moved = true;
+    if (this.currentTab === 'tm') {
+      moved = this.tm.step();
+    } else if (this.currentTab === 'pda') {
+      moved = this.pda.step();
+    } else if (this.currentTab === 'compare') {
+      moved = this.stepBoth();
+    } else {
+      const tmMoved = this.tm.step();
+      const pdaMoved = this.pda.step();
+      moved = tmMoved || pdaMoved;
     }
     this.render();
     return moved;
+  }
+
+  stepBoth() {
+    const tmHalted = this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED';
+    const pdaHalted = this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED';
+    if (tmHalted && pdaHalted) {
+      this.resetSimulators();
+    }
+    const tmMoved = this.tm.step();
+    const pdaMoved = this.pda.step();
+    this.render();
+    return tmMoved || pdaMoved;
   }
 
   stepBackward() {
@@ -834,29 +986,50 @@ class AppController {
     this.render();
   }
 
-  runTM() {
-    const isDone = (this.currentTab === 'tm' && (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED')) ||
-                   (this.currentTab === 'pda' && (this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED'));
-    if (isDone) {
+  runBoth() {
+    const tmHalted = this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED';
+    const pdaHalted = this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED';
+    if (tmHalted && pdaHalted) {
       this.resetSimulators();
     }
 
     this.isPlaying = true;
-    if (this.runIcon) this.runIcon.textContent = '⏸';
-    if (this.runText) this.runText.textContent = 'Pause';
-    if (this.btnRunTM) this.btnRunTM.classList.add('btn-primary');
+    this.updateControlsForPlayState();
 
-    // Run delay between 300ms and 700ms
-    const intervalMs = Math.max(120, Math.floor(520 / this.speed));
+    const intervalMs = Math.max(140, Math.floor(480 / this.speed));
+    this.playInterval = setInterval(() => {
+      const tmMoved = this.tm.step();
+      const pdaMoved = this.pda.step();
+      this.render();
+
+      const bothDone = (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED') &&
+                       (this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED');
+      if (!tmMoved && !pdaMoved || bothDone) {
+        this.pause();
+      }
+    }, intervalMs);
+  }
+
+  runTM() {
+    if (this.currentTab === 'compare') {
+      return this.runBoth();
+    }
+
+    const currentDone = (this.currentTab === 'tm' && (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED')) ||
+                        (this.currentTab === 'pda' && (this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED'));
+    if (currentDone) {
+      this.resetSimulators();
+    }
+
+    this.isPlaying = true;
+    this.updateControlsForPlayState();
+
+    const intervalMs = Math.max(140, Math.floor(480 / this.speed));
     this.playInterval = setInterval(() => {
       const moved = this.stepForward();
-      const currentDone = (this.currentTab === 'tm' && (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED')) ||
-                          (this.currentTab === 'pda' && (this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED')) ||
-                          (this.currentTab === 'compare' && 
-                           (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED') &&
-                           (this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED'));
-
-      if (!moved || currentDone) {
+      const isDone = (this.currentTab === 'tm' && (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED')) ||
+                     (this.currentTab === 'pda' && (this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED'));
+      if (!moved || isDone) {
         this.pause();
       }
     }, intervalMs);
@@ -864,18 +1037,13 @@ class AppController {
 
   pause() {
     this.isPlaying = false;
-    if (this.runIcon) this.runIcon.textContent = '▶';
-    if (this.runText) this.runText.textContent = 'Run TM';
     if (this.playInterval) {
       clearInterval(this.playInterval);
       this.playInterval = null;
     }
-    if (this.tm.status === 'RUNNING') {
-      this.tm.status = 'PAUSED';
-    }
-    if (this.pda.status === 'RUNNING') {
-      this.pda.status = 'PAUSED';
-    }
+    this.updateControlsForPlayState();
+    if (this.tm.status === 'RUNNING') this.tm.status = 'PAUSED';
+    if (this.pda.status === 'RUNNING') this.pda.status = 'PAUSED';
     this.render();
   }
 
@@ -1082,11 +1250,12 @@ class AppController {
       this.pdaStreamChars.appendChild(epsBox);
     }
 
-    // Render Stack Blocks
+    // Render Stack Blocks (Top to Bottom)
     this.pdaStackContainer.innerHTML = '';
-    this.pda.stack.forEach((sym, idx) => {
+    const reversed = [...this.pda.stack].reverse();
+    reversed.forEach((sym, idx) => {
       const block = document.createElement('div');
-      block.className = `stack-item ${sym === 'Z₀' ? 'bottom-marker' : ''}`;
+      block.className = `stack-item ${sym === 'Z₀' ? 'bottom-marker' : ''} ${idx === 0 ? 'top-item' : ''}`;
       block.textContent = sym;
       this.pdaStackContainer.appendChild(block);
     });
@@ -1103,46 +1272,180 @@ class AppController {
       if (r) r.classList.add('highlight-transition');
     }
 
+    // Standalone PDA Result Banner
+    if (this.pdaResultBanner) {
+      if (this.pda.status === 'ACCEPTED') {
+        this.pdaResultBanner.style.display = 'flex';
+        this.pdaResultBanner.className = 'tm-result-banner accepted';
+        if (this.pdaResultBannerIcon) this.pdaResultBannerIcon.textContent = '✓';
+        if (this.pdaResultBannerContent) {
+          this.pdaResultBannerContent.innerHTML = `<strong>✓ ACCEPTED:</strong> PDA reached final state <code>q_f</code> with empty stack (bottom marker $Z_0$) for "<code>${this.activeString || 'ε'}</code>" $\\in L = \\{a^n b^n \\mid n \\ge 1\\}$`;
+          renderMathSafely(this.pdaResultBannerContent);
+        }
+      } else if (this.pda.status === 'REJECTED') {
+        this.pdaResultBanner.style.display = 'flex';
+        this.pdaResultBanner.className = 'tm-result-banner rejected';
+        if (this.pdaResultBannerIcon) this.pdaResultBannerIcon.textContent = '✗';
+        if (this.pdaResultBannerContent) {
+          this.pdaResultBannerContent.innerHTML = `<strong>✗ REJECTED:</strong> ${this.pda.lastOp.desc}`;
+        }
+      } else {
+        this.pdaResultBanner.style.display = 'none';
+      }
+    }
+
     // PDA Log
     this.pdaLogCount.textContent = `${this.pda.traceLog.length} events`;
     this.renderTraceLog(this.pdaTraceLog, this.pda.traceLog);
   }
 
   renderCompare() {
-    // TM Mini
-    this.compareTmStatus.textContent = this.tm.status;
-    this.compareTmState.textContent = this.formatStateName(this.tm.state);
-    this.compareTmSteps.textContent = this.tm.stepCount;
-    this.compareTmHead.textContent = this.tm.head;
-    const lastTmLog = this.tm.traceLog[this.tm.traceLog.length - 1];
-    this.compareTmTrace.textContent = lastTmLog ? lastTmLog.desc : "TM Initialized.";
+    // 1. Dual Toolbar Status & Input Display
+    if (this.dualInputDisplay) {
+      this.dualInputDisplay.textContent = `"${this.activeString || 'ε'}"`;
+    }
+    if (this.dualGlobalStatus) {
+      let gLabel = 'Dual Simulator: Ready';
+      let gClass = 'status-pill status-ready';
+      const tmAcc = this.tm.status === 'ACCEPTED';
+      const pdaAcc = this.pda.status === 'ACCEPTED';
+      const tmRej = this.tm.status === 'REJECTED';
+      const pdaRej = this.pda.status === 'REJECTED';
 
-    this.compareTapeTrack.innerHTML = '';
-    this.tm.tape.slice(0, 14).forEach((symbol, idx) => {
-      const cell = document.createElement('div');
-      cell.className = `tape-cell symbol-${symbol.toLowerCase()} ${idx === this.tm.head ? 'head-active' : ''}`;
-      cell.textContent = symbol === 'B' ? '␣' : symbol;
-      this.compareTapeTrack.appendChild(cell);
+      if (tmAcc && pdaAcc) {
+        gLabel = '✓ Both Machines: ACCEPTED';
+        gClass = 'status-pill status-accepted';
+      } else if (tmRej && pdaRej) {
+        gLabel = '✗ Both Machines: REJECTED';
+        gClass = 'status-pill status-rejected';
+      } else if (this.isPlaying) {
+        gLabel = '⚡ Dual Simulating Concurrently...';
+        gClass = 'status-pill status-running';
+      } else if (tmAcc || pdaAcc) {
+        gLabel = tmAcc ? 'TM Finished (ACCEPT) • PDA Simulating...' : 'PDA Finished (ACCEPT) • TM Simulating...';
+        gClass = 'status-pill status-running';
+      } else if (tmRej || pdaRej) {
+        gLabel = tmRej ? 'TM Finished (REJECT) • PDA Simulating...' : 'PDA Finished (REJECT) • TM Simulating...';
+        gClass = 'status-pill status-running';
+      }
+      this.dualGlobalStatus.textContent = gLabel;
+      this.dualGlobalStatus.className = gClass;
+    }
+
+    // 2. Turing Machine View
+    if (this.compareTmStatus) {
+      this.compareTmStatus.textContent = this.tm.status;
+      this.compareTmStatus.className = `status-pill status-${this.tm.status.toLowerCase()}`;
+    }
+    if (this.compareTmState) this.compareTmState.textContent = this.formatStateName(this.tm.state);
+    if (this.compareTmSteps) this.compareTmSteps.textContent = this.tm.stepCount;
+    if (this.compareTmHead) this.compareTmHead.textContent = `Cell ${this.tm.head}`;
+    if (this.compareTmScanned) this.compareTmScanned.textContent = `'${this.tm.getScannedSymbol()}'`;
+
+    // TM Mini Tape Track
+    if (this.compareTapeTrack) {
+      this.compareTapeTrack.innerHTML = '';
+      const visibleRange = Math.max(14, this.tm.head + 4);
+      this.tm.tape.slice(0, visibleRange).forEach((symbol, idx) => {
+        const cell = document.createElement('div');
+        cell.className = `tape-cell symbol-${symbol.toLowerCase()} ${idx === this.tm.head ? 'head-active' : ''}`;
+        cell.textContent = symbol === 'B' ? '␣' : symbol;
+        this.compareTapeTrack.appendChild(cell);
+      });
+    }
+
+    // TM Transition & Last Operation
+    const tmAction = this.tm.getNextAction();
+    if (this.compareTmTransition) {
+      this.compareTmTransition.textContent = tmAction.text || '-';
+    }
+    if (this.compareTmLastOp) {
+      const lastTmLog = this.tm.traceLog[this.tm.traceLog.length - 1];
+      this.compareTmLastOp.textContent = lastTmLog ? lastTmLog.desc : 'Tape initialized at cell 0';
+    }
+
+    // TM Trace Log
+    if (this.compareTmLog) {
+      this.renderTraceLog(this.compareTmLog, this.tm.traceLog);
+      if (this.compareTmLogCount) this.compareTmLogCount.textContent = `${this.tm.traceLog.length} steps`;
+    }
+
+    // 3. Pushdown Automaton View
+    if (this.comparePdaStatus) {
+      this.comparePdaStatus.textContent = this.pda.status;
+      this.comparePdaStatus.className = `status-pill status-${this.pda.status.toLowerCase()}`;
+    }
+    if (this.comparePdaState) this.comparePdaState.textContent = this.formatStateName(this.pda.state);
+    if (this.comparePdaSteps) this.comparePdaSteps.textContent = this.pda.stepCount;
+    if (this.comparePdaPos) this.comparePdaPos.textContent = `Index ${this.pda.inputIndex}`;
+    if (this.comparePdaChar) this.comparePdaChar.textContent = `'${this.pda.getNextInputChar()}'`;
+
+    // PDA Input Stream with Pointer
+    if (this.comparePdaStream) {
+      this.renderStreamWithPointer(this.comparePdaStream, this.pda.chars, this.pda.inputIndex);
+    }
+
+    // PDA Vertical Stack Chamber
+    if (this.comparePdaTop) this.comparePdaTop.textContent = this.pda.getTop() || 'Empty';
+    if (this.comparePdaHeight) this.comparePdaHeight.textContent = this.pda.stack.length;
+    if (this.comparePdaStackChamber) {
+      this.comparePdaStackChamber.innerHTML = '';
+      const revStack = [...this.pda.stack].reverse();
+      revStack.forEach((sym, idx) => {
+        const block = document.createElement('div');
+        block.className = `stack-block ${idx === 0 ? 'is-top' : ''} ${sym === 'Z₀' ? 'is-bottom' : ''}`;
+        block.innerHTML = `${idx === 0 ? '<span class="top-arrow-indicator" style="font-size: 0.72rem; color: #34d399; margin-right: 4px;">TOP →</span>' : ''}<span>${sym}</span>`;
+        this.comparePdaStackChamber.appendChild(block);
+      });
+    }
+
+    // PDA Transition & Last Operation
+    const pdaAction = this.pda.getNextAction();
+    if (this.comparePdaTransition) {
+      this.comparePdaTransition.textContent = pdaAction.transition || '-';
+    }
+    if (this.comparePdaOpBadge) {
+      this.comparePdaOpBadge.textContent = this.pda.lastOp.type || 'INIT';
+      const opLow = (this.pda.lastOp.type || '').toLowerCase();
+      this.comparePdaOpBadge.className = `op-badge-inline ${opLow.includes('push') ? 'push' : (opLow.includes('pop') ? 'pop' : (opLow.includes('accept') ? 'accept' : (opLow.includes('reject') ? 'reject' : '')))}`;
+    }
+    if (this.comparePdaLastOp) {
+      const lastPdaLog = this.pda.traceLog[this.pda.traceLog.length - 1];
+      this.comparePdaLastOp.textContent = lastPdaLog ? lastPdaLog.desc : 'Initialized stack with Z₀ in state q₀';
+    }
+
+    // PDA Trace Log
+    if (this.comparePdaLog) {
+      this.renderTraceLog(this.comparePdaLog, this.pda.traceLog);
+      if (this.comparePdaLogCount) this.comparePdaLogCount.textContent = `${this.pda.traceLog.length} steps`;
+    }
+  }
+
+  renderStreamWithPointer(container, chars, activeIdx) {
+    container.innerHTML = '';
+    const track = document.createElement('div');
+    track.className = 'pda-stream-inline';
+
+    const fullChars = chars.length > 0 ? [...chars, 'ε'] : ['ε'];
+    const currentIdx = Math.min(activeIdx, fullChars.length - 1);
+
+    fullChars.forEach((ch, idx) => {
+      const box = document.createElement('div');
+      box.className = 'stream-char-unit';
+      if (idx < activeIdx) {
+        box.classList.add('consumed');
+      } else if (idx === currentIdx) {
+        box.classList.add('active');
+      }
+
+      box.innerHTML = `
+        <div class="char-val">${ch}</div>
+        <div class="char-ptr">${idx === currentIdx ? '↑' : ''}</div>
+      `;
+      track.appendChild(box);
     });
 
-    // PDA Mini
-    this.comparePdaStatus.textContent = this.pda.status;
-    this.comparePdaState.textContent = this.formatStateName(this.pda.state);
-    this.comparePdaSteps.textContent = this.pda.stepCount;
-    this.comparePdaHeight.textContent = this.pda.stack.length;
-    const lastPdaLog = this.pda.traceLog[this.pda.traceLog.length - 1];
-    this.comparePdaTrace.textContent = lastPdaLog ? lastPdaLog.desc : "PDA Initialized.";
-
-    this.comparePdaStack.innerHTML = '';
-    this.pda.stack.forEach((sym) => {
-      const pill = document.createElement('div');
-      pill.className = 'stack-item';
-      pill.style.width = '42px';
-      pill.style.height = '34px';
-      pill.style.fontSize = '0.9rem';
-      pill.textContent = sym;
-      this.comparePdaStack.appendChild(pill);
-    });
+    container.appendChild(track);
   }
 
   renderTraceLog(container, logItems) {
