@@ -776,7 +776,7 @@
       </div>
     </section>
 
-    <!-- TAB 5: Theory, Pumping Lemma & Viva Section -->
+    <!-- TAB 5: Theory & Pumping Lemma Proofs Section -->
     <section class="tab-content" id="content-theory">
       <div class="theory-wrapper" id="theory-section">
         <!-- Section 1: Problem Definition -->
@@ -879,44 +879,6 @@
                 <li><strong>$F$ (Final States):</strong> $\{q_f\}$</li>
               </ul>
             </div>
-          </div>
-        </article>
-
-        <!-- Section 4: Viva Questions and Answers -->
-        <article class="card theory-card">
-          <div class="theory-header">
-            <span class="sec-number">04</span>
-            <h2>Examiner Viva & Interview Preparation Guide</h2>
-          </div>
-
-          <div class="faq-accordion">
-            <details class="faq-item" open>
-              <summary><strong>Q1: Why can't a Finite Automaton recognize $L = \{a^n b^n \mid n \ge 1\}$?</strong></summary>
-              <div class="faq-content">
-                A Finite Automaton has a strictly finite set of internal states (no external memory or stack). To recognize $a^n b^n$, it must count an arbitrarily large number of symbols $a$ to ensure an identical number of symbols $b$ follow. Since $n$ can be arbitrarily large (e.g., $n = 10^9$), by the Pigeonhole Principle the automaton will be forced to loop into already visited states and lose the exact count of symbol $a$.
-              </div>
-            </details>
-
-            <details class="faq-item">
-              <summary><strong>Q2: Why is the time complexity of the 1-Tape Turing Machine $O(n^2)$ for this language?</strong></summary>
-              <div class="faq-content">
-                For each symbol $a$ that the TM marks as $X$, the tape head must traverse all remaining symbol $a$'s and existing $Y$'s to find and cross the matching $b$ with $Y$ (distance roughly $2n$). Then the head must rewind all the way back to the left $X$. This round-trip takes $O(n)$ steps per matching pair. Since there are $n$ pairs, the total time is $O(n \times n) = O(n^2)$.
-              </div>
-            </details>
-
-            <details class="faq-item">
-              <summary><strong>Q3: How does a Pushdown Automaton achieve $O(n)$ time complexity?</strong></summary>
-              <div class="faq-content">
-                A PDA processes the input string from left to right in a single linear pass. Each symbol $a$ is pushed onto the stack in $O(1)$ time, and each symbol $b$ pops an $a$ in $O(1)$ time. At the end, a single check verifies that the stack contains only the bottom marker $Z_0$. Thus, total operations $= 2n$ transitions, resulting in optimal $O(n)$ linear time.
-              </div>
-            </details>
-
-            <details class="faq-item">
-              <summary><strong>Q4: Why does the problem specify $n \ge 1$ instead of $n \ge 0$?</strong></summary>
-              <div class="faq-content">
-                When $n \ge 0$, the empty string $\epsilon$ ($a^0 b^0$) belongs to the language. When $n \ge 1$, $\epsilon$ must be rejected. In our Turing machine, if the initial symbol under the head is Blank ($B$), it halts in a non-accepting state, correctly rejecting $\epsilon$.
-              </div>
-            </details>
           </div>
         </article>
       </div>
