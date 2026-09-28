@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TOC Case Study 10: Recognition of L = {aⁿbⁿ | n ≥ 1}</title>
+  <meta name="description" content="Interactive visualizer and simulator for Theory of Computation Case Study 10: Recognition of Context-Free Language L = {a^n b^n | n >= 1} via Turing Machine and Pushdown Automaton.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="badge-tag">TOC CASE STUDY 10</div>
+        <h1>Recognition of Language <span class="formula-highlight">L = {aⁿbⁿ | n ≥ 1}</span></h1>
+        <p class="subtitle">Context-Free Language Analysis • Turing Machine vs Pushdown Automaton • Pumping Lemma</p>
+      </div>
+      <div class="header-right">
+        <div class="sound-toggle-btn" id="soundToggle" title="Toggle Sound FX">
+          <span class="icon">🔊</span> <span class="sound-text">Sound ON</span>
+        </div>
+        <a href="#theory-section" class="doc-link-btn">📘 Theory & Proofs</a>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" role="tablist">
+      <button class="nav-tab active" data-tab="tm" id="tab-tm" role="tab">
+        <span class="tab-icon">📼</span> Turing Machine (TM)
+      </button>
+      <button class="nav-tab" data-tab="pda" id="tab-pda" role="tab">
+        <span class="tab-icon">🥞</span> Pushdown Automaton (PDA)
+      </button>
+      <button class="nav-tab" data-tab="compare" id="tab-compare" role="tab">
+        <span class="tab-icon">⚡</span> Dual Simulator (Side-by-Side)
+      </button>
+      <button class="nav-tab" data-tab="batch" id="tab-batch" role="tab">
+        <span class="tab-icon">🧪</span> Batch Test Suite
+      </button>
+      <button class="nav-tab" data-tab="theory" id="tab-theory" role="tab">
+        <span class="tab-icon">📜</span> Pumping Lemma & Formal Proofs
+      </button>
+    </nav>
+
+    <!-- Global Input & Preset Bar -->
+    <section class="control-banner card">
+      <div class="input-row">
+        <div class="input-group">
+          <label for="stringInput">Input String $w \in \{a, b\}^*$:</label>
+          <div class="input-field-wrap">
+            <input type="text" id="stringInput" value="aabb" placeholder="e.g. aabb, aaabbb, ab" autocomplete="off" spellcheck="false">
+            <button class="clear-btn" id="clearInputBtn" title="Clear input">✕</button>
+          </div>
+        </div>
+
+        <div class="preset-group">
+          <label>Quick Presets:</label>
+          <div class="preset-badges">
+            <button class="preset-btn valid" data-val="ab" title="Valid: n=1">ab (n=1)</button>
+            <button class="preset-btn valid" data-val="aabb" title="Valid: n=2">aabb (n=2)</button>
+            <button class="preset-btn valid" data-val="aaabbb" title="Valid: n=3">aaabbb (n=3)</button>
+            <button class="preset-btn valid" data-val="aaaabbbb" title="Valid: n=4">a⁴b⁴ (n=4)</button>
+            <button class="preset-btn invalid" data-val="" title="Invalid: Empty string (n=0 not in L)">ε (Empty)</button>
+            <button class="preset-btn invalid" data-val="aab" title="Invalid: More a's than b's">aab</button>
+            <button class="preset-btn invalid" data-val="abb" title="Invalid: More b's than a's">abb</button>
+            <button class="preset-btn invalid" data-val="ba" title="Invalid: Wrong order">ba</button>
+            <button class="preset-btn invalid" data-val="bbaa" title="Invalid: b's before a's">bbaa</button>
+            <button class="preset-btn invalid" data-val="aba" title="Invalid: Alternating">aba</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" id="loadStringBtn">
+          <span>🔄</span> Load into Simulator
+        </button>
+      </div>
+
+      <!-- Execution Controls -->
+      <div class="playback-controls">
+        <div class="btn-cluster">
+          <button class="btn btn-action" id="btnPlayPause" title="Play / Pause automatic execution">
+            <span id="playIcon">▶</span> <span id="playText">Play</span>
+          </button>
+          <button class="btn btn-action" id="btnStepFwd" title="Execute next single transition step">
+            <span>⏭</span> Step
+          </button>
+          <button class="btn btn-action" id="btnStepBack" title="Undo / Step backward">
+            <span>⏮</span> Step Back
+          </button>
+          <button class="btn btn-action" id="btnReset" title="Reset simulator to initial state">
+            <span>🔁</span> Reset
+          </button>
+          <button class="btn btn-action" id="btnFastRun" title="Instant run to completion">
+            <span>⏩</span> Complete Run
+          </button>
+        </div>
+
+        <div class="speed-slider-wrap">
+          <label for="speedSlider">Speed: <span id="speedValue">1.0x</span></label>
+          <input type="range" id="speedSlider" min="0.2" max="3.0" step="0.2" value="1.0">
+        </div>
+
+        <!-- Result Status Badge -->
+        <div class="result-badge-wrap">
+          <div class="status-pill status-ready" id="globalStatusPill">
+            <span class="status-indicator"></span>
+            <span class="status-text" id="globalStatusText">Ready (String loaded)</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 1: Turing Machine Simulator -->
+    <main class="tab-content active" id="content-tm">
+      <div class="grid-2col">
+        <!-- Left: Tape & Execution Visualizer -->
+        <div class="card tm-visualizer-card">
+          <div class="card-header">
+            <h2>📼 Turing Machine Tape & Read/Write Head</h2>
+            <div class="meta-tags">
+              <span class="badge">Model: 1-Tape Deterministic TM</span>
+              <span class="badge" id="tmStepCounter">Step: 0</span>
+            </div>
+          </div>
+
+          <!-- Live State Banner -->
+          <div class="state-metrics-bar">
+            <div class="metric-box">
+              <span class="metric-label">CURRENT STATE</span>
+              <span class="metric-value highlight-state" id="tmCurrentState">q₀</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">HEAD SCANNED SYMBOL</span>
+              <span class="metric-value" id="tmScannedSymbol">a</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">HEAD POSITION</span>
+              <span class="metric-value" id="tmHeadIndex">0</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">NEXT PLANNED ACTION</span>
+              <span class="metric-value font-mono" id="tmPlannedAction">δ(q₀, a) → (q₁, X, R)</span>
+            </div>
+          </div>
+
+          <!-- Tape Container -->
+          <div class="tape-viewport-container">
+            <div class="tape-ruler" id="tapeRuler"></div>
+            <div class="tape-track" id="tapeTrack">
+              <!-- Tape cells dynamically injected -->
+            </div>
+            <div class="tape-head-pointer" id="tapeHeadPointer">
+              <div class="pointer-triangle"></div>
+              <div class="pointer-label" id="pointerStateLabel">q₀</div>
+            </div>
+          </div>
+
+          <!-- Step Explanation -->
+          <div class="explanation-box" id="tmExplanation">
+            <div class="expl-icon">💡</div>
+            <div class="expl-text" id="tmExplText">
+              Initial state: The Turing Machine head is positioned at cell 0 ready to scan the first symbol.
+            </div>
+          </div>
+
+          <!-- Transition Diagram Visualizer (SVG) -->
+          <div class="diagram-section">
+            <div class="sub-header">
+              <h3>State Transition Graph</h3>
+              <span class="hint">Active state & transitions illuminate in real-time</span>
+            </div>
+            <div class="svg-diagram-wrapper" id="tmDiagramContainer">
+              <svg id="tmSvg" viewBox="0 0 740 220" preserveAspectRatio="xMidYMid meet">
+                <!-- Defs for arrows and glow filters -->
+                <defs>
+                  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent-cyan)" />
+                  </marker>
+                  <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent-amber)" />
+                  </marker>
+                  <marker id="arrow-accept" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent-emerald)" />
+                  </marker>
+                  <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="blur" />
+                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                  </filter>
+                </defs>
+
+                <!-- Transition Paths -->
+                <!-- q0 -> q1: (a/X, R) -->
+                <path id="edge-q0-q1" d="M 80,100 L 220,100" class="edge-path" marker-end="url(#arrow)" />
+                <text x="150" y="88" class="edge-label">a → X, R</text>
+
+                <!-- q1 self loop: a->a, R and Y->Y, R -->
+                <path id="edge-q1-loop" d="M 235,75 C 235,25 265,25 265,75" class="edge-path" marker-end="url(#arrow)" />
+                <text x="250" y="32" class="edge-label">a/a, R | Y/Y, R</text>
+
+                <!-- q1 -> q2: (b/Y, L) -->
+                <path id="edge-q1-q2" d="M 280,100 L 420,100" class="edge-path" marker-end="url(#arrow)" />
+                <text x="350" y="88" class="edge-label">b → Y, L</text>
+
+                <!-- q2 self loop: a->a, L and Y->Y, L -->
+                <path id="edge-q2-loop" d="M 435,75 C 435,25 465,25 465,75" class="edge-path" marker-end="url(#arrow)" />
+                <text x="450" y="32" class="edge-label">a/a, L | Y/Y, L</text>
+
+                <!-- q2 -> q0 (rewind loop bottom): (X/X, R) -->
+                <path id="edge-q2-q0" d="M 430,125 C 330,195 170,195 70,125" class="edge-path" marker-end="url(#arrow)" />
+                <text x="250" y="195" class="edge-label">X → X, R</text>
+
+                <!-- q0 -> q3: (Y/Y, R) -->
+                <path id="edge-q0-q3" d="M 70,75 C 160,-15 500,-15 580,75" class="edge-path" marker-end="url(#arrow)" />
+                <text x="340" y="15" class="edge-label">Y → Y, R</text>
+
+                <!-- q3 self loop: Y->Y, R -->
+                <path id="edge-q3-loop" d="M 590,75 C 590,25 615,25 615,75" class="edge-path" marker-end="url(#arrow)" />
+                <text x="605" y="32" class="edge-label">Y/Y, R</text>
+
+                <!-- q3 -> q_accept: (B/B, R) -->
+                <path id="edge-q3-qacc" d="M 630,100 L 685,100" class="edge-path" marker-end="url(#arrow-accept)" />
+                <text x="655" y="88" class="edge-label">B → B, R</text>
+
+                <!-- Nodes -->
+                <!-- Start Arrow -->
+                <path d="M 10,100 L 40,100" class="edge-path" marker-end="url(#arrow)" />
+                <text x="18" y="92" class="edge-label">Start</text>
+
+                <!-- State q0 -->
+                <g id="node-q0" class="graph-node">
+                  <circle cx="60" cy="100" r="22" class="node-circle" />
+                  <text cx="60" cy="100" class="node-text">q₀</text>
+                </g>
+
+                <!-- State q1 -->
+                <g id="node-q1" class="graph-node">
+                  <circle cx="250" cy="100" r="22" class="node-circle" />
+                  <text cx="250" cy="100" class="node-text">q₁</text>
+                </g>
+
+                <!-- State q2 -->
+                <g id="node-q2" class="graph-node">
+                  <circle cx="450" cy="100" r="22" class="node-circle" />
+                  <text cx="450" cy="100" class="node-text">q₂</text>
+                </g>
+
+                <!-- State q3 -->
+                <g id="node-q3" class="graph-node">
+                  <circle cx="600" cy="100" r="22" class="node-circle" />
+                  <text cx="600" cy="100" class="node-text">q₃</text>
+                </g>
+
+                <!-- State q_accept (Double Circle) -->
+                <g id="node-q_accept" class="graph-node accept-node">
+                  <circle cx="705" cy="100" r="22" class="node-circle" />
+                  <circle cx="705" cy="100" r="18" class="node-circle inner" />
+                  <text cx="705" cy="100" class="node-text">q_acc</text>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Transition Table & Trace Log -->
+        <div class="card tm-sidebar-card">
+          <div class="card-header">
+            <h3>📖 TM Transition Function $\delta(q, \sigma)$</h3>
+            <span class="badge">Alphabet: {a, b, X, Y, B}</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="transition-table" id="tmTransitionTable">
+              <thead>
+                <tr>
+                  <th>State</th>
+                  <th>Read 'a'</th>
+                  <th>Read 'b'</th>
+                  <th>Read 'X'</th>
+                  <th>Read 'Y'</th>
+                  <th>Read 'B' (Blank)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr id="row-q0">
+                  <td class="state-cell">q₀ (Start)</td>
+                  <td id="cell-q0-a" data-trans="q0-a">(q₁, X, R)</td>
+                  <td id="cell-q0-b" data-trans="q0-b">-</td>
+                  <td id="cell-q0-X" data-trans="q0-X">-</td>
+                  <td id="cell-q0-Y" data-trans="q0-Y">(q₃, Y, R)</td>
+                  <td id="cell-q0-B" data-trans="q0-B">-</td>
+                </tr>
+                <tr id="row-q1">
+                  <td class="state-cell">q₁ (Seek 'b')</td>
+                  <td id="cell-q1-a" data-trans="q1-a">(q₁, a, R)</td>
+                  <td id="cell-q1-b" data-trans="q1-b">(q₂, Y, L)</td>
+                  <td id="cell-q1-X" data-trans="q1-X">-</td>
+                  <td id="cell-q1-Y" data-trans="q1-Y">(q₁, Y, R)</td>
+                  <td id="cell-q1-B" data-trans="q1-B">-</td>
+                </tr>
+                <tr id="row-q2">
+                  <td class="state-cell">q₂ (Rewind)</td>
+                  <td id="cell-q2-a" data-trans="q2-a">(q₂, a, L)</td>
+                  <td id="cell-q2-b" data-trans="q2-b">-</td>
+                  <td id="cell-q2-X" data-trans="q2-X">(q₀, X, R)</td>
+                  <td id="cell-q2-Y" data-trans="q2-Y">(q₂, Y, L)</td>
+                  <td id="cell-q2-B" data-trans="q2-B">-</td>
+                </tr>
+                <tr id="row-q3">
+                  <td class="state-cell">q₃ (Check end)</td>
+                  <td id="cell-q3-a" data-trans="q3-a">-</td>
+                  <td id="cell-q3-b" data-trans="q3-b">-</td>
+                  <td id="cell-q3-X" data-trans="q3-X">-</td>
+                  <td id="cell-q3-Y" data-trans="q3-Y">(q₃, Y, R)</td>
+                  <td id="cell-q3-B" data-trans="q3-B">(q_acc, B, R)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Execution Trace Log -->
+          <div class="trace-header">
+            <h3>Execution Trace Log</h3>
+            <button class="btn btn-sm" id="btnExportLog">📥 Export Log</button>
+          </div>
+          <div class="trace-log-wrap" id="tmTraceLog">
+            <!-- Trace log items populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- TAB 2: Pushdown Automaton (PDA) Simulator -->
+    <section class="tab-content" id="content-pda">
+      <div class="grid-2col">
+        <!-- Left: PDA Visualization (Stack & Input Tape) -->
+        <div class="card pda-visualizer-card">
+          <div class="card-header">
+            <h2>🥞 Pushdown Automaton (PDA) Visualizer</h2>
+            <div class="meta-tags">
+              <span class="badge">Acceptance: Final State</span>
+              <span class="badge" id="pdaStepCounter">Step: 0</span>
+            </div>
+          </div>
+
+          <!-- State Metrics -->
+          <div class="state-metrics-bar">
+            <div class="metric-box">
+              <span class="metric-label">CURRENT STATE</span>
+              <span class="metric-value highlight-state" id="pdaCurrentState">q₀</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">REMAINING INPUT</span>
+              <span class="metric-value font-mono" id="pdaRemainingInput">aabb</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">TOP OF STACK</span>
+              <span class="metric-value" id="pdaTopStack">Z₀</span>
+            </div>
+            <div class="metric-box">
+              <span class="metric-label">STACK SIZE</span>
+              <span class="metric-value" id="pdaStackSize">1</span>
+            </div>
+          </div>
+
+          <!-- Visual Input Strip -->
+          <div class="pda-input-stream">
+            <div class="stream-label">Input Tape Stream:</div>
+            <div class="stream-chars" id="pdaStreamChars">
+              <!-- Rendered characters with active pointer -->
+            </div>
+          </div>
+
+          <!-- Animated Stack Chamber -->
+          <div class="stack-section">
+            <div class="stack-column">
+              <div class="stack-top-indicator">
+                <span class="arrow-down">⬇</span> TOP OF STACK POINTER
+              </div>
+              <div class="stack-container" id="pdaStackContainer">
+                <!-- Stack blocks pushed here -->
+              </div>
+              <div class="stack-base">
+                <span>STACK BASE (BOTTOM)</span>
+              </div>
+            </div>
+
+            <!-- Operations Legend / Live Action -->
+            <div class="stack-live-operation">
+              <h4>Last Operation:</h4>
+              <div class="op-card" id="pdaLastOpCard">
+                <div class="op-badge" id="pdaOpType">INIT</div>
+                <div class="op-desc" id="pdaOpDesc">Initialized stack with bottom marker Z₀ in state q₀.</div>
+              </div>
+
+              <div class="pda-rules-summary">
+                <h4>PDA Operation Philosophy:</h4>
+                <ul>
+                  <li><strong>For each 'a' scanned:</strong> PUSH 'A' onto the stack ($n$ counting phase).</li>
+                  <li><strong>For each 'b' scanned:</strong> POP 'A' off the stack (1-to-1 matching phase).</li>
+                  <li><strong>On empty input:</strong> If stack top is $Z_0$, transition to accepting state $q_f$.</li>
+                  <li><strong>Error condition:</strong> Popping on empty stack, reading 'a' after 'b', or stack non-empty at end.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- PDA Explanation Box -->
+          <div class="explanation-box" id="pdaExplanation">
+            <div class="expl-icon">💡</div>
+            <div class="expl-text" id="pdaExplText">
+              PDA initialized in state q₀. Input is ready for consumption.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: PDA Formal Spec & Transition Table -->
+        <div class="card pda-sidebar-card">
+          <div class="card-header">
+            <h3>📖 PDA Transition Function $\delta(q, \sigma, \text{top})$</h3>
+            <span class="badge">Stack Alphabet: {A, Z₀}</span>
+          </div>
+
+          <div class="table-responsive">
+            <table class="transition-table" id="pdaTransitionTable">
+              <thead>
+                <tr>
+                  <th>Rule ID</th>
+                  <th>Current State</th>
+                  <th>Input Symbol</th>
+                  <th>Stack Top</th>
+                  <th>Next State</th>
+                  <th>Stack Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr id="pda-rule-1">
+                  <td>R1</td>
+                  <td>q₀</td>
+                  <td>a</td>
+                  <td>Z₀</td>
+                  <td>q₁</td>
+                  <td>Push A (AZ₀)</td>
+                </tr>
+                <tr id="pda-rule-2">
+                  <td>R2</td>
+                  <td>q₁</td>
+                  <td>a</td>
+                  <td>A</td>
+                  <td>q₁</td>
+                  <td>Push A (AA)</td>
+                </tr>
+                <tr id="pda-rule-3">
+                  <td>R3</td>
+                  <td>q₁</td>
+                  <td>b</td>
+                  <td>A</td>
+                  <td>q₂</td>
+                  <td>Pop A (ε)</td>
+                </tr>
+                <tr id="pda-rule-4">
+                  <td>R4</td>
+                  <td>q₂</td>
+                  <td>b</td>
+                  <td>A</td>
+                  <td>q₂</td>
+                  <td>Pop A (ε)</td>
+                </tr>
+                <tr id="pda-rule-5">
+                  <td>R5</td>
+                  <td>q₂</td>
+                  <td>ε (End)</td>
+                  <td>Z₀</td>
+                  <td>q_f</td>
+                  <td>Accept (Keep Z₀)</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Trace Log -->
+          <div class="trace-header">
+            <h3>PDA Step Log</h3>
+            <span class="sub-badge" id="pdaLogCount">0 events</span>
+          </div>
+          <div class="trace-log-wrap" id="pdaTraceLog"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: Dual Simulator (Side-by-Side Comparison) -->
+    <section class="tab-content" id="content-compare">
+      <div class="compare-header-card card">
+        <h2>⚡ Turing Machine vs Pushdown Automaton: Parallel Execution</h2>
+        <p>Watch both automata process the exact same input string concurrently to observe the fundamental computational difference:</p>
+        <div class="compare-stats-grid">
+          <div class="compare-stat-pill">
+            <span class="name">Turing Machine (1-Tape)</span>
+            <span class="val">Time Complexity: <strong class="text-cyan">O(n²)</strong> • Space: <strong class="text-cyan">O(n)</strong></span>
+          </div>
+          <div class="compare-stat-pill">
+            <span class="name">Pushdown Automaton (PDA)</span>
+            <span class="val">Time Complexity: <strong class="text-emerald">O(n)</strong> • Space: <strong class="text-emerald">O(n)</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2col">
+        <!-- TM Mini Visualizer -->
+        <div class="card mini-visualizer">
+          <div class="card-header">
+            <h3>📼 Turing Machine View</h3>
+            <span class="badge" id="compareTmStatus">Ready</span>
+          </div>
+          <div class="tape-track mini" id="compareTapeTrack"></div>
+          <div class="mini-metrics">
+            <span>State: <strong id="compareTmState">q₀</strong></span>
+            <span>Steps: <strong id="compareTmSteps">0</strong></span>
+            <span>Head: Cell <strong id="compareTmHead">0</strong></span>
+          </div>
+          <div class="mini-trace" id="compareTmTrace">Ready to start.</div>
+        </div>
+
+        <!-- PDA Mini Visualizer -->
+        <div class="card mini-visualizer">
+          <div class="card-header">
+            <h3>🥞 Pushdown Automaton View</h3>
+            <span class="badge" id="comparePdaStatus">Ready</span>
+          </div>
+          <div class="mini-stack-display" id="comparePdaStack"></div>
+          <div class="mini-metrics">
+            <span>State: <strong id="comparePdaState">q₀</strong></span>
+            <span>Steps: <strong id="comparePdaSteps">0</strong></span>
+            <span>Stack Height: <strong id="comparePdaHeight">1</strong></span>
+          </div>
+          <div class="mini-trace" id="comparePdaTrace">Ready to start.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: Batch Test Suite -->
+    <section class="tab-content" id="content-batch">
+      <div class="card">
+        <div class="card-header">
+          <h2>🧪 Comprehensive Automated Test Suite</h2>
+          <div class="cluster">
+            <button class="btn btn-primary" id="btnRunAllTests">▶ Run All Tests</button>
+            <button class="btn btn-secondary" id="btnAddCustomTest">+ Add Custom Test</button>
+          </div>
+        </div>
+
+        <p class="subtitle">Validates both Turing Machine and PDA recognition algorithms against positive cases, negative cases, boundary cases, and adversarial malformed strings.</p>
+
+        <div class="batch-summary-cards">
+          <div class="sum-card total">
+            <div class="num" id="batchTotal">0</div>
+            <div class="lbl">Total Tests</div>
+          </div>
+          <div class="sum-card passed">
+            <div class="num" id="batchPassed">0</div>
+            <div class="lbl">Passed</div>
+          </div>
+          <div class="sum-card failed">
+            <div class="num" id="batchFailed">0</div>
+            <div class="lbl">Failed</div>
+          </div>
+          <div class="sum-card accuracy">
+            <div class="num" id="batchAccuracy">100%</div>
+            <div class="lbl">Accuracy</div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="batch-table" id="batchResultsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Test String</th>
+                <th>Length</th>
+                <th>Expected Result</th>
+                <th>TM Result</th>
+                <th>TM Steps</th>
+                <th>PDA Result</th>
+                <th>PDA Steps</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="batchTableBody">
+              <!-- Test rows populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: Theory, Pumping Lemma & Viva Section -->
+    <section class="tab-content" id="content-theory">
+      <div class="theory-wrapper" id="theory-section">
+        <!-- Section 1: Problem Definition -->
+        <article class="card theory-card">
+          <div class="theory-header">
+            <span class="sec-number">01</span>
+            <h2>Problem Statement & Formal Context</h2>
+          </div>
+          <p>
+            The language under study is defined as:
+          </p>
+          <div class="math-block">
+            $$L = \{a^n b^n \mid n \ge 1\} = \{ab, aabb, aaabbb, aaaabbbb, \dots\}$$
+          </div>
+          <p>
+            It represents all strings consisting of a non-zero sequence of symbol <code>a</code> followed immediately by an <strong>equal number</strong> of symbol <code>b</code>.
+          </p>
+          <div class="callout callout-info">
+            <strong>Key Chomsky Hierarchy Classification:</strong>
+            <ul>
+              <li><strong>Type-3 (Regular Languages):</strong> ❌ Cannot recognize $L$ (no memory/counting mechanism).</li>
+              <li><strong>Type-2 (Context-Free Languages):</strong> ✔ Recognized by non-deterministic and deterministic Pushdown Automata (PDA) using a single LIFO stack.</li>
+              <li><strong>Type-1 / Type-0 (Context-Sensitive / Recursively Enumerable):</strong> ✔ Recognized by Linear Bounded Automata (LBA) and Turing Machines (TM).</li>
+            </ul>
+          </div>
+        </article>
+
+        <!-- Section 2: Pumping Lemma Proof -->
+        <article class="card theory-card">
+          <div class="theory-header">
+            <span class="sec-number">02</span>
+            <h2>Mathematical Proof: Why Finite Automata (DFA/NFA) Fail</h2>
+          </div>
+          <p>
+            To prove that $L = \{a^n b^n \mid n \ge 1\}$ is <strong>not regular</strong>, we use the <strong>Pumping Lemma for Regular Languages</strong> via proof by contradiction.
+          </p>
+
+          <div class="proof-box">
+            <h3>Theorem (Pumping Lemma for Regular Languages):</h3>
+            <p>
+              If $L$ is a regular language, then there exists a constant integer $p \ge 1$ (the pumping length) such that any string $s \in L$ with length $|s| \ge p$ can be partitioned into three substrings $s = xyz$ such that:
+            </p>
+            <ol>
+              <li>$|y| > 0$ (the pumped substring is non-empty)</li>
+              <li>$|xy| \le p$ (the pumped substring lies within the prefix of length $p$)</li>
+              <li>For all $i \ge 0$, $x y^i z \in L$.</li>
+            </ol>
+
+            <div class="proof-steps">
+              <h4>Step-by-step Contradiction Proof:</h4>
+              <p><strong>1. Assumption:</strong> Assume for contradiction that $L = \{a^n b^n \mid n \ge 1\}$ is regular.</p>
+              <p><strong>2. Pumping Length:</strong> Let $p$ be the pumping length guaranteed by the Pumping Lemma.</p>
+              <p><strong>3. Choice of String:</strong> Choose the string $s = a^p b^p$. Notice that $s \in L$ and $|s| = 2p \ge p$.</p>
+              <p><strong>4. Decomposition:</strong> By Condition 2 ($|xy| \le p$), the substring $xy$ must consist exclusively of the prefix $a^p$. Therefore, $y$ can only contain symbol $a$. We can write:</p>
+              <div class="math-block">
+                $$y = a^k \quad \text{for some } k \ge 1 \text{ (since } |y| > 0 \text{)}$$
+              </div>
+              <p><strong>5. Pumping with $i = 2$ (or $i = 0$):</strong> Consider the pumped string $s' = x y^2 z$:</p>
+              <div class="math-block">
+                $$s' = x y y z = a^{p-k} a^{2k} b^p = a^{p+k} b^p$$
+              </div>
+              <p><strong>6. Contradiction:</strong> In $s'$, the number of $a$'s is $p+k$, but the number of $b$'s is $p$. Since $k \ge 1$, $p+k \ne p$. Therefore, $s' \notin L$, which directly violates Condition 3 of the Pumping Lemma!</p>
+              <p><strong>Conclusion:</strong> The assumption that $L$ is regular is false. Hence, <strong>$L$ is not regular</strong> and cannot be recognized by any DFA or NFA.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Section 3: Formal 7-Tuples -->
+        <article class="card theory-card">
+          <div class="theory-header">
+            <span class="sec-number">03</span>
+            <h2>Formal Mathematical 7-Tuple Definitions</h2>
+          </div>
+
+          <div class="grid-2col">
+            <div class="tuple-box">
+              <h3>Turing Machine 7-Tuple</h3>
+              <p class="font-mono">M = (Q, Σ, Γ, δ, q₀, B, F)</p>
+              <ul>
+                <li><strong>Q (States):</strong> $\{q_0, q_1, q_2, q_3, q_{\text{accept}}\}$</li>
+                <li><strong>Σ (Input Alphabet):</strong> $\{a, b\}$</li>
+                <li><strong>Γ (Tape Alphabet):</strong> $\{a, b, X, Y, B\}$</li>
+                <li><strong>δ (Transition Function):</strong> $Q \times \Gamma \to Q \times \Gamma \times \{L, R\}$</li>
+                <li><strong>q₀ (Initial State):</strong> $q_0$</li>
+                <li><strong>B (Blank Symbol):</strong> $B$</li>
+                <li><strong>F (Final/Accepting States):</strong> $\{q_{\text{accept}}\}$</li>
+              </ul>
+            </div>
+
+            <div class="tuple-box">
+              <h3>Pushdown Automaton 7-Tuple</h3>
+              <p class="font-mono">P = (Q, Σ, Γ, δ, q₀, Z₀, F)</p>
+              <ul>
+                <li><strong>Q (States):</strong> $\{q_0, q_1, q_2, q_f\}$</li>
+                <li><strong>Σ (Input Alphabet):</strong> $\{a, b\}$</li>
+                <li><strong>Γ (Stack Alphabet):</strong> $\{A, Z_0\}$</li>
+                <li><strong>δ (Transition Function):</strong> $Q \times (\Sigma \cup \{\epsilon\}) \times \Gamma \to \mathcal{P}(Q \times \Gamma^*)$</li>
+                <li><strong>q₀ (Initial State):</strong> $q_0$</li>
+                <li><strong>Z₀ (Initial Stack Symbol):</strong> $Z_0$</li>
+                <li><strong>F (Final States):</strong> $\{q_f\}$</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <!-- Section 4: Viva Questions and Answers -->
+        <article class="card theory-card">
+          <div class="theory-header">
+            <span class="sec-number">04</span>
+            <h2>Examiner Viva & Interview Preparation Guide</h2>
+          </div>
+
+          <div class="faq-accordion">
+            <details class="faq-item" open>
+              <summary><strong>Q1: Why can't a Finite Automaton recognize $L = \{a^n b^n \mid n \ge 1\}$?</strong></summary>
+              <div class="faq-content">
+                A Finite Automaton has a strictly finite set of internal states (no external memory or stack). To recognize $a^n b^n$, it must count an arbitrarily large number of $a$'s to ensure an identical number of $b$'s follow. Since $n$ can be arbitrarily large (e.g. $n = 10^9$), by the Pigeonhole Principle the automaton will be forced to loop into already visited states and lose the exact count of $a$'s.
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><strong>Q2: Why is the time complexity of the 1-Tape Turing Machine $O(n^2)$ for this language?</strong></summary>
+              <div class="faq-content">
+                For each $a$ that the TM marks as $X$, the tape head must traverse all remaining $a$'s and existing $Y$'s to find and cross the matching $b$ with $Y$ (distance roughly $2n$). Then the head must rewind all the way back to the left $X$. This round-trip takes $O(n)$ steps per matching pair. Since there are $n$ pairs, the total time is $O(n \times n) = O(n^2)$.
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><strong>Q3: How does a Pushdown Automaton achieve $O(n)$ time complexity?</strong></summary>
+              <div class="faq-content">
+                A PDA processes the input string from left to right in a single linear pass. Each $a$ is pushed onto the stack in $O(1)$ time, and each $b$ pops an $a$ in $O(1)$ time. At the end, a single check verifies that the stack contains only the bottom marker $Z_0$. Thus, total operations $= 2n$ transitions, resulting in optimal $O(n)$ linear time.
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><strong>Q4: Why does the problem specify $n \ge 1$ instead of $n \ge 0$?</strong></summary>
+              <div class="faq-content">
+                When $n \ge 0$, the empty string $\epsilon$ ($a^0 b^0$) belongs to the language. When $n \ge 1$, $\epsilon$ must be rejected. In our Turing machine, if the initial symbol under the head is Blank ($B$), it halts in a non-accepting state, correctly rejecting $\epsilon$.
+              </div>
+            </details>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-content">
+        <p><strong>Theory of Computation (TOC) Academic Project</strong> • Case Study 10: Recognition of $L = \{a^n b^n \mid n \ge 1\}$</p>
+        <p class="credits">Designed with Deterministic State Machine Visualizers, High-Performance Canvas & SVG Animations</p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
