@@ -1644,3 +1644,35 @@ h1, h2, h3, h4 {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ==========================================================================
+   KaTeX Professional Mathematical Typography & Mobile Responsiveness
+   ========================================================================== */
+.katex {
+  font-size: 1.02em;
+  text-rendering: geometricPrecision;
+}
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 6px 0;
+  margin: 0.5em 0 !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.formula-highlight .katex {
+  -webkit-text-fill-color: initial;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 16px var(--accent-cyan-glow);
+}
+
+.tm-result-banner .katex {
+  font-size: 1.08em;
+  margin-left: 4px;
+}
+
+.tuple-box .katex {
+  color: var(--text-main);
+}

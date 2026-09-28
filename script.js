@@ -791,6 +791,8 @@ class AppController {
       content.classList.toggle('active', content.id === `content-${tabId}`);
     });
     this.render();
+    const activeSection = document.getElementById(`content-${tabId}`);
+    if (activeSection) renderMathSafely(activeSection);
   }
 
   loadString(str) {
@@ -940,14 +942,16 @@ class AppController {
         this.tmResultBanner.className = 'tm-result-banner accepted';
         if (this.tmResultBannerIcon) this.tmResultBannerIcon.textContent = '✓';
         if (this.tmResultBannerContent) {
-          this.tmResultBannerContent.innerHTML = `<strong>✓ ACCEPTED:</strong> String "<code>${this.activeString || 'ε'}</code>" belongs to <code>L = {aⁿbⁿ | n ≥ 1}</code>`;
+          this.tmResultBannerContent.innerHTML = `<strong>✓ ACCEPTED:</strong> String "<code>${this.activeString || 'ε'}</code>" belongs to $L = \\{a^n b^n \\mid n \\ge 1\\}$`;
+          renderMathSafely(this.tmResultBannerContent);
         }
       } else if (this.tm.status === 'REJECTED') {
         this.tmResultBanner.style.display = 'flex';
         this.tmResultBanner.className = 'tm-result-banner rejected';
         if (this.tmResultBannerIcon) this.tmResultBannerIcon.textContent = '✗';
         if (this.tmResultBannerContent) {
-          this.tmResultBannerContent.innerHTML = `<strong>✗ REJECTED:</strong> String "<code>${this.activeString || 'ε'}</code>" does not belong to <code>L = {aⁿbⁿ | n ≥ 1}</code>`;
+          this.tmResultBannerContent.innerHTML = `<strong>✗ REJECTED:</strong> String "<code>${this.activeString || 'ε'}</code>" does not belong to $L = \\{a^n b^n \\mid n \\ge 1\\}$`;
+          renderMathSafely(this.tmResultBannerContent);
         }
       } else {
         this.tmResultBanner.style.display = 'none';
@@ -1269,7 +1273,32 @@ class AppController {
   }
 }
 
+// Safely render LaTeX math formulas using KaTeX auto-render extension
+function renderMathSafely(container = document.body) {
+  if (typeof renderMathInElement === 'function' && container) {
+    try {
+      renderMathInElement(container, {
+        delimiters: [
+          { left: '$$', right: '$$', display: true },
+          { left: '$', right: '$', display: false },
+          { left: '\\(', right: '\\)', display: false },
+          { left: '\\[', right: '\\]', display: true }
+        ],
+        throwOnError: false
+      });
+    } catch (e) {
+      console.warn('KaTeX render warning:', e);
+    }
+  }
+}
+
 // Instantiate on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
   window.tocApp = new AppController();
+  renderMathSafely(document.body);
+});
+
+// Re-render math once deferred external fonts and KaTeX scripts are fully loaded
+window.addEventListener('load', () => {
+  renderMathSafely(document.body);
 });
