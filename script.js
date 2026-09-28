@@ -657,6 +657,7 @@ class AppController {
     this.tabs = document.querySelectorAll('.nav-tab');
     this.tabContents = document.querySelectorAll('.tab-content');
     this.soundToggle = document.getElementById('soundToggle');
+    this.btnTheoryLink = document.getElementById('btnTheoryLink');
 
     // Global Input Controls
     this.stringInput = document.getElementById('stringInput');
@@ -780,6 +781,25 @@ class AppController {
         const targetTab = tab.getAttribute('data-tab');
         this.switchTab(targetTab);
       });
+    });
+
+    // Theory & Proofs header button and shortcuts
+    const navigateToTheory = (e) => {
+      if (e) e.preventDefault();
+      this.switchTab('theory');
+      setTimeout(() => {
+        const target = document.getElementById('theory-section') || document.getElementById('content-theory');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 50);
+    };
+
+    if (this.btnTheoryLink) {
+      this.btnTheoryLink.addEventListener('click', navigateToTheory);
+    }
+    document.querySelectorAll('[href="#theory-section"], [data-tab="theory"]:not(.nav-tab)').forEach(el => {
+      el.addEventListener('click', navigateToTheory);
     });
 
     // Sound toggle
