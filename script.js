@@ -134,21 +134,33 @@ class TuringMachine {
 
   reset() {
     this.tape = this.buildInitialTape(this.inputString);
-    this.head = 1; // Cell 1 is the first input symbol; Cell 0 is left blank
+    this.head = 0; // Starts at cell 0
     this.state = 'q0';
     this.stepCount = 0;
-    this.status = 'READY'; // READY, RUNNING, ACCEPTED, REJECTED
+    this.status = 'READY'; // READY, RUNNING, PAUSED, ACCEPTED, REJECTED
     this.history = [];
     this.traceLog = [];
     this.currentTransitionId = null;
+    this.currentRowId = null;
     this.currentEdgeId = null;
-    this.saveSnapshot("Initialized Turing Machine tape with input.");
+
+    const initialSymbol = this.getScannedSymbol();
+    this.traceLog.push({
+      step: 0,
+      state: 'q0',
+      scanned: initialSymbol,
+      desc: `Step 0: State: q0, Read: '${initialSymbol}'`,
+      status: 'READY'
+    });
+    this.saveSnapshot(`Step 0: Initial state q0, scanned symbol '${initialSymbol}', head at cell 0.`);
   }
 
   buildInitialTape(str) {
-    // Pad with blank 'B' on both ends
+    if (!str || str.length === 0) {
+      return ['B', 'B', 'B'];
+    }
     const chars = str.split('');
-    return ['B', ...chars, 'B', 'B', 'B', 'B'];
+    return [...chars, 'B', 'B', 'B'];
   }
 
   saveSnapshot(desc = '') {
@@ -160,6 +172,7 @@ class TuringMachine {
       status: this.status,
       desc: desc,
       transitionId: this.currentTransitionId,
+      rowId: this.currentRowId,
       edgeId: this.currentEdgeId
     });
   }
@@ -173,66 +186,81 @@ class TuringMachine {
     const symbol = this.getScannedSymbol();
     const st = this.state;
 
-    if (st === 'q_accept') return { type: 'HALT', text: 'Accepted (Halted in q_accept)' };
-    if (st === 'q_reject') return { type: 'HALT', text: 'Rejected (Halted in q_reject)' };
+    if (st === 'q_accept') return { type: 'HALT', text: 'Accepted (Halted in q_acc)', nextState: 'q_accept', write: symbol, dir: 'HALT' };
+    if (st === 'q_reject') return { type: 'HALT', text: 'Rejected (Halted in q_rej)', nextState: 'q_reject', write: symbol, dir: 'HALT' };
 
-    // Transition definitions: δ(state, symbol) = (nextState, writeSymbol, direction, tableCell, edgeId)
+    // Transition definitions: δ(state, symbol) = (nextState, writeSymbol, direction, tableCell, rowId, edgeId)
     // Direction: 'R' (Right), 'L' (Left)
     if (st === 'q0') {
       if (symbol === 'a') {
-        return { nextState: 'q1', write: 'X', dir: 'R', cell: 'cell-q0-a', edge: 'edge-q0-q1', text: 'δ(q₀, a) → (q₁, X, R)' };
+        return { nextState: 'q1', write: 'X', dir: 'R', cell: 'cell-q0-a', row: 'row-q0', edge: 'edge-q0-q1', text: 'δ(q₀, a) → (q₁, X, R)' };
       }
       if (symbol === 'Y') {
-        return { nextState: 'q3', write: 'Y', dir: 'R', cell: 'cell-q0-Y', edge: 'edge-q0-q3', text: 'δ(q₀, Y) → (q₃, Y, R)' };
+        return { nextState: 'q3', write: 'Y', dir: 'R', cell: 'cell-q0-Y', row: 'row-q0', edge: 'edge-q0-q3', text: 'δ(q₀, Y) → (q₃, Y, R)' };
       }
       // Rejections in q0:
       if (symbol === 'B') {
-        return { nextState: 'q_reject', write: 'B', dir: 'R', text: 'Reject: Empty string or premature blank (n ≥ 1 required)' };
+        return { nextState: 'q_reject', write: 'B', dir: 'HALT', row: 'row-q0', text: 'Reject: Empty string or premature blank (n ≥ 1 required)' };
       }
-      return { nextState: 'q_reject', write: symbol, dir: 'R', text: `Reject: Unexpected '${symbol}' at start` };
+      return { nextState: 'q_reject', write: symbol, dir: 'HALT', row: 'row-q0', text: `Reject: Unexpected '${symbol}' at start` };
     }
 
     if (st === 'q1') {
       if (symbol === 'a') {
-        return { nextState: 'q1', write: 'a', dir: 'R', cell: 'cell-q1-a', edge: 'edge-q1-loop', text: 'δ(q₁, a) → (q₁, a, R)' };
+        return { nextState: 'q1', write: 'a', dir: 'R', cell: 'cell-q1-a', row: 'row-q1', edge: 'edge-q1-loop', text: 'δ(q₁, a) → (q₁, a, R)' };
       }
       if (symbol === 'Y') {
-        return { nextState: 'q1', write: 'Y', dir: 'R', cell: 'cell-q1-Y', edge: 'edge-q1-loop', text: 'δ(q₁, Y) → (q₁, Y, R)' };
+        return { nextState: 'q1', write: 'Y', dir: 'R', cell: 'cell-q1-Y', row: 'row-q1', edge: 'edge-q1-loop', text: 'δ(q₁, Y) → (q₁, Y, R)' };
       }
       if (symbol === 'b') {
-        return { nextState: 'q2', write: 'Y', dir: 'L', cell: 'cell-q1-b', edge: 'edge-q1-q2', text: 'δ(q₁, b) → (q₂, Y, L)' };
+        return { nextState: 'q2', write: 'Y', dir: 'L', cell: 'cell-q1-b', row: 'row-q1', edge: 'edge-q1-q2', text: 'δ(q₁, b) → (q₂, Y, L)' };
       }
-      return { nextState: 'q_reject', write: symbol, dir: 'R', text: `Reject: Missing matching 'b' (found '${symbol}')` };
+      return { nextState: 'q_reject', write: symbol, dir: 'HALT', row: 'row-q1', text: `Reject: Missing matching 'b' (found '${symbol}')` };
     }
 
     if (st === 'q2') {
       if (symbol === 'a') {
-        return { nextState: 'q2', write: 'a', dir: 'L', cell: 'cell-q2-a', edge: 'edge-q2-loop', text: 'δ(q₂, a) → (q₂, a, L)' };
+        return { nextState: 'q2', write: 'a', dir: 'L', cell: 'cell-q2-a', row: 'row-q2', edge: 'edge-q2-loop', text: 'δ(q₂, a) → (q₂, a, L)' };
       }
       if (symbol === 'Y') {
-        return { nextState: 'q2', write: 'Y', dir: 'L', cell: 'cell-q2-Y', edge: 'edge-q2-loop', text: 'δ(q₂, Y) → (q₂, Y, L)' };
+        return { nextState: 'q2', write: 'Y', dir: 'L', cell: 'cell-q2-Y', row: 'row-q2', edge: 'edge-q2-loop', text: 'δ(q₂, Y) → (q₂, Y, L)' };
       }
       if (symbol === 'X') {
-        return { nextState: 'q0', write: 'X', dir: 'R', cell: 'cell-q2-X', edge: 'edge-q2-q0', text: 'δ(q₂, X) → (q₀, X, R)' };
+        return { nextState: 'q0', write: 'X', dir: 'R', cell: 'cell-q2-X', row: 'row-q2', edge: 'edge-q2-q0', text: 'δ(q₂, X) → (q₀, X, R)' };
       }
-      return { nextState: 'q_reject', write: symbol, dir: 'L', text: `Reject: Unexpected '${symbol}' during rewind` };
+      return { nextState: 'q_reject', write: symbol, dir: 'HALT', row: 'row-q2', text: `Reject: Unexpected '${symbol}' during rewind` };
     }
 
     if (st === 'q3') {
       if (symbol === 'Y') {
-        return { nextState: 'q3', write: 'Y', dir: 'R', cell: 'cell-q3-Y', edge: 'edge-q3-loop', text: 'δ(q₃, Y) → (q₃, Y, R)' };
+        return { nextState: 'q3', write: 'Y', dir: 'R', cell: 'cell-q3-Y', row: 'row-q3', edge: 'edge-q3-loop', text: 'δ(q₃, Y) → (q₃, Y, R)' };
       }
       if (symbol === 'B') {
-        return { nextState: 'q_accept', write: 'B', dir: 'R', cell: 'cell-q3-B', edge: 'edge-q3-qacc', text: 'δ(q₃, B) → (q_acc, B, R)' };
+        return { nextState: 'q_accept', write: 'B', dir: 'R', cell: 'cell-q3-B', row: 'row-q3', edge: 'edge-q3-qacc', text: 'δ(q₃, B) → (q_acc, B, R)' };
       }
-      return { nextState: 'q_reject', write: symbol, dir: 'R', text: `Reject: Stray symbol '${symbol}' remaining after match` };
+      return { nextState: 'q_reject', write: symbol, dir: 'HALT', row: 'row-q3', text: `Reject: Stray symbol '${symbol}' remaining after match` };
     }
 
-    return { nextState: 'q_reject', write: symbol, dir: 'R', text: 'Undefined transition -> Reject' };
+    return { nextState: 'q_reject', write: symbol, dir: 'HALT', text: 'Undefined transition -> Reject' };
   }
 
   step() {
     if (this.status === 'ACCEPTED' || this.status === 'REJECTED') {
+      return false;
+    }
+
+    // Safety guard against infinite loops
+    if (this.stepCount >= 5000) {
+      this.status = 'REJECTED';
+      this.state = 'q_reject';
+      const desc = `Step ${this.stepCount + 1}: Exceeded safety limit of 5000 steps. REJECTED!`;
+      this.traceLog.push({
+        step: this.stepCount + 1,
+        state: 'q_reject',
+        desc: desc,
+        status: 'REJECTED'
+      });
+      this.saveSnapshot(desc);
       return false;
     }
 
@@ -247,6 +275,7 @@ class TuringMachine {
 
     this.stepCount++;
     this.currentTransitionId = action.cell || null;
+    this.currentRowId = action.row || null;
     this.currentEdgeId = action.edge || null;
 
     // Apply tape write
@@ -268,15 +297,15 @@ class TuringMachine {
     let desc = "";
     if (this.state === 'q_accept') {
       this.status = 'ACCEPTED';
-      desc = `Step ${this.stepCount}: At cell ${currHead}, scanned '${scanned}', wrote '${action.write}', moved ${action.dir} to q_acc. String is ACCEPTED!`;
+      desc = `Step ${this.stepCount}: ${currState} + ${scanned} → ${action.write}, ${action.dir}, ${this.state} (ACCEPT)`;
       sound.playAccept();
     } else if (this.state === 'q_reject') {
       this.status = 'REJECTED';
-      desc = `Step ${this.stepCount}: ${action.text}. String is REJECTED!`;
+      desc = `Step ${this.stepCount}: ${currState} + ${scanned} → ${action.text} (REJECT)`;
       sound.playReject();
     } else {
       this.status = 'RUNNING';
-      desc = `Step ${this.stepCount}: In state ${currState}, scanned '${scanned}' → wrote '${action.write}', moved ${action.dir} to ${this.state}.`;
+      desc = `Step ${this.stepCount}: ${currState} + ${scanned} → ${action.write}, ${action.dir}, ${this.state}`;
       sound.playTapeClick();
     }
 
@@ -306,9 +335,10 @@ class TuringMachine {
     this.stepCount = prev.stepCount;
     this.status = prev.status;
     this.currentTransitionId = prev.transitionId;
+    this.currentRowId = prev.rowId;
     this.currentEdgeId = prev.edgeId;
 
-    if (this.traceLog.length > 0) {
+    if (this.traceLog.length > 1) {
       this.traceLog.pop();
     }
     return true;
@@ -531,24 +561,28 @@ class AppController {
 
     this.testCases = [
       { str: "ab", desc: "Minimal valid case (n=1)" },
-      { str: "aabb", desc: "Even case (n=2)" },
+      { str: "aabb", desc: "Even valid case (n=2)" },
       { str: "aaabbb", desc: "Higher order (n=3)" },
-      { str: "aaaabbbb", desc: "Large balanced (n=4)" },
+      { str: "aaaabbbb", desc: "Balanced (n=4)" },
       { str: "aaaaabbbbb", desc: "Stress test (n=5)" },
-      { str: "", desc: "Empty string ε (n=0 not in L)" },
       { str: "a", desc: "Single 'a' without 'b'" },
       { str: "b", desc: "Single 'b' without 'a'" },
-      { str: "aab", desc: "Unbalanced: more 'a's than 'b's" },
-      { str: "abb", desc: "Unbalanced: more 'b's than 'a's" },
+      { str: "aa", desc: "Missing 'b's" },
+      { str: "bb", desc: "Missing 'a's" },
+      { str: "aab", desc: "More a's than b's" },
+      { str: "abb", desc: "More b's than a's" },
+      { str: "aaabb", desc: "More a's than b's" },
+      { str: "aabbb", desc: "More b's than a's" },
+      { str: "abab", desc: "Alternating sequence" },
       { str: "ba", desc: "Inverted order: 'b' precedes 'a'" },
-      { str: "bbaa", desc: "Inverted blocks" },
-      { str: "aba", desc: "Alternating sequence" },
-      { str: "aabba", desc: "Extra trailing 'a'" },
-      { str: "aabcbb", desc: "Illegal character 'c'" }
+      { str: "baba", desc: "Alternating sequence" },
+      { str: "abc", desc: "Illegal character 'c'" },
+      { str: "", desc: "Empty string ε (n=0 not in L)" }
     ];
 
     this.cacheDom();
     this.bindEvents();
+    this.validateInput(this.activeString);
     this.render();
     this.renderBatchSuite();
   }
@@ -564,11 +598,13 @@ class AppController {
     this.clearInputBtn = document.getElementById('clearInputBtn');
     this.loadStringBtn = document.getElementById('loadStringBtn');
     this.presetButtons = document.querySelectorAll('.preset-btn');
+    this.inputValidationMsg = document.getElementById('inputValidationMsg');
 
     // Playback Controls
-    this.btnPlayPause = document.getElementById('btnPlayPause');
-    this.playIcon = document.getElementById('playIcon');
-    this.playText = document.getElementById('playText');
+    this.btnRunTM = document.getElementById('btnRunTM') || document.getElementById('btnPlayPause');
+    this.runIcon = document.getElementById('runIcon') || document.getElementById('playIcon');
+    this.runText = document.getElementById('runText') || document.getElementById('playText');
+    this.btnPause = document.getElementById('btnPause');
     this.btnStepFwd = document.getElementById('btnStepFwd');
     this.btnStepBack = document.getElementById('btnStepBack');
     this.btnReset = document.getElementById('btnReset');
@@ -585,11 +621,25 @@ class AppController {
     this.tmHeadIndex = document.getElementById('tmHeadIndex');
     this.tmPlannedAction = document.getElementById('tmPlannedAction');
     this.tapeTrack = document.getElementById('tapeTrack');
+    this.tapeTopHead = document.getElementById('tapeTopHead');
     this.tapeHeadPointer = document.getElementById('tapeHeadPointer');
     this.pointerStateLabel = document.getElementById('pointerStateLabel');
     this.tmExplText = document.getElementById('tmExplText');
     this.tmTraceLog = document.getElementById('tmTraceLog');
     this.btnExportLog = document.getElementById('btnExportLog');
+
+    // Prominent Status Panel DOM
+    this.panelCurrentState = document.getElementById('panelCurrentState');
+    this.panelScannedSymbol = document.getElementById('panelScannedSymbol');
+    this.panelWriteSymbol = document.getElementById('panelWriteSymbol');
+    this.panelMoveDir = document.getElementById('panelMoveDir');
+    this.panelNextState = document.getElementById('panelNextState');
+    this.panelExecStatus = document.getElementById('panelExecStatus');
+
+    // Prominent Result Banner DOM
+    this.tmResultBanner = document.getElementById('tmResultBanner');
+    this.tmResultBannerContent = document.getElementById('tmResultBannerContent');
+    this.tmResultBannerIcon = document.getElementById('tmResultBannerIcon');
 
     // PDA Tab DOM
     this.pdaStepCounter = document.getElementById('pdaStepCounter');
@@ -646,11 +696,17 @@ class AppController {
       this.soundToggle.querySelector('.icon').textContent = sound.enabled ? '🔊' : '🔇';
     });
 
+    // Input live validation
+    this.stringInput.addEventListener('input', () => {
+      this.validateInput(this.stringInput.value.trim());
+    });
+
     // Preset buttons
     this.presetButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const val = btn.getAttribute('data-val');
         this.stringInput.value = val;
+        this.validateInput(val);
         this.loadString(val);
       });
     });
@@ -658,22 +714,32 @@ class AppController {
     // Clear input
     this.clearInputBtn.addEventListener('click', () => {
       this.stringInput.value = '';
+      this.validateInput('');
       this.stringInput.focus();
     });
 
     // Load String button
     this.loadStringBtn.addEventListener('click', () => {
-      this.loadString(this.stringInput.value.trim());
+      const val = this.stringInput.value.trim();
+      this.validateInput(val);
+      this.loadString(val);
     });
 
     this.stringInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        this.loadString(this.stringInput.value.trim());
+        const val = this.stringInput.value.trim();
+        this.validateInput(val);
+        this.loadString(val);
       }
     });
 
     // Playback Controls
-    this.btnPlayPause.addEventListener('click', () => this.togglePlay());
+    if (this.btnRunTM) {
+      this.btnRunTM.addEventListener('click', () => this.runTM());
+    }
+    if (this.btnPause) {
+      this.btnPause.addEventListener('click', () => this.pause());
+    }
     this.btnStepFwd.addEventListener('click', () => this.stepForward());
     this.btnStepBack.addEventListener('click', () => this.stepBackward());
     this.btnReset.addEventListener('click', () => this.resetSimulators());
@@ -685,7 +751,7 @@ class AppController {
       this.speedValue.textContent = `${this.speed.toFixed(1)}x`;
       if (this.isPlaying) {
         this.pause();
-        this.play();
+        this.runTM();
       }
     });
 
@@ -695,6 +761,27 @@ class AppController {
     // Batch runner
     this.btnRunAllTests.addEventListener('click', () => this.renderBatchSuite());
     this.btnAddCustomTest.addEventListener('click', () => this.promptCustomTest());
+  }
+
+  validateInput(str) {
+    if (!this.inputValidationMsg) return true;
+
+    if (str === '') {
+      this.inputValidationMsg.className = 'validation-msg info';
+      this.inputValidationMsg.textContent = 'ℹ️ Note: The empty string is rejected because n ≥ 1.';
+      this.inputValidationMsg.style.display = 'block';
+      return true;
+    }
+
+    if (!/^[ab]+$/.test(str)) {
+      this.inputValidationMsg.className = 'validation-msg error';
+      this.inputValidationMsg.textContent = "⚠️ Invalid input. Only the symbols 'a' and 'b' are allowed.";
+      this.inputValidationMsg.style.display = 'block';
+      return false;
+    }
+
+    this.inputValidationMsg.style.display = 'none';
+    return true;
   }
 
   switchTab(tabId) {
@@ -729,7 +816,6 @@ class AppController {
     if (this.currentTab === 'pda' || this.currentTab === 'compare') {
       moved = this.pda.step() || moved;
     }
-    // If on batch or theory, step both
     if (this.currentTab === 'batch' || this.currentTab === 'theory') {
       this.tm.step();
       this.pda.step();
@@ -746,15 +832,7 @@ class AppController {
     this.render();
   }
 
-  togglePlay() {
-    if (this.isPlaying) {
-      this.pause();
-    } else {
-      this.play();
-    }
-  }
-
-  play() {
+  runTM() {
     const isDone = (this.currentTab === 'tm' && (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED')) ||
                    (this.currentTab === 'pda' && (this.pda.status === 'ACCEPTED' || this.pda.status === 'REJECTED'));
     if (isDone) {
@@ -762,11 +840,12 @@ class AppController {
     }
 
     this.isPlaying = true;
-    this.playIcon.textContent = '⏸';
-    this.playText.textContent = 'Pause';
-    this.btnPlayPause.classList.add('btn-primary');
+    if (this.runIcon) this.runIcon.textContent = '⏸';
+    if (this.runText) this.runText.textContent = 'Pause';
+    if (this.btnRunTM) this.btnRunTM.classList.add('btn-primary');
 
-    const intervalMs = Math.max(80, Math.floor(600 / this.speed));
+    // Run delay between 300ms and 700ms
+    const intervalMs = Math.max(120, Math.floor(520 / this.speed));
     this.playInterval = setInterval(() => {
       const moved = this.stepForward();
       const currentDone = (this.currentTab === 'tm' && (this.tm.status === 'ACCEPTED' || this.tm.status === 'REJECTED')) ||
@@ -783,13 +862,19 @@ class AppController {
 
   pause() {
     this.isPlaying = false;
-    this.playIcon.textContent = '▶';
-    this.playText.textContent = 'Play';
-    this.btnPlayPause.classList.remove('btn-primary');
+    if (this.runIcon) this.runIcon.textContent = '▶';
+    if (this.runText) this.runText.textContent = 'Run TM';
     if (this.playInterval) {
       clearInterval(this.playInterval);
       this.playInterval = null;
     }
+    if (this.tm.status === 'RUNNING') {
+      this.tm.status = 'PAUSED';
+    }
+    if (this.pda.status === 'RUNNING') {
+      this.pda.status = 'PAUSED';
+    }
+    this.render();
   }
 
   fastRun() {
@@ -818,12 +903,12 @@ class AppController {
   }
 
   renderGlobalStatus() {
-    // Current primary status
     const status = this.currentTab === 'pda' ? this.pda.status : this.tm.status;
     this.globalStatusPill.className = `status-pill status-${status.toLowerCase()}`;
 
     let label = 'Ready';
     if (status === 'RUNNING') label = 'Simulating...';
+    if (status === 'PAUSED') label = 'Paused';
     if (status === 'ACCEPTED') label = 'String ACCEPTED (w ∈ L)';
     if (status === 'REJECTED') label = 'String REJECTED (w ∉ L)';
     this.globalStatusText.textContent = label;
@@ -831,12 +916,43 @@ class AppController {
 
   renderTM() {
     this.tmStepCounter.textContent = `Step: ${this.tm.stepCount}`;
-    this.tmCurrentState.textContent = this.formatStateName(this.tm.state);
-    this.tmScannedSymbol.textContent = `'${this.tm.getScannedSymbol()}'`;
-    this.tmHeadIndex.textContent = `Cell ${this.tm.head}`;
+    if (this.tmCurrentState) this.tmCurrentState.textContent = this.formatStateName(this.tm.state);
+    if (this.tmScannedSymbol) this.tmScannedSymbol.textContent = `'${this.tm.getScannedSymbol()}'`;
+    if (this.tmHeadIndex) this.tmHeadIndex.textContent = `Cell ${this.tm.head}`;
 
     const action = this.tm.getNextAction();
-    this.tmPlannedAction.textContent = action.text || '-';
+    if (this.tmPlannedAction) this.tmPlannedAction.textContent = action.text || '-';
+
+    // Prominent Status Panel Update
+    if (this.panelCurrentState) this.panelCurrentState.textContent = this.formatStateName(this.tm.state);
+    if (this.panelScannedSymbol) this.panelScannedSymbol.textContent = `'${this.tm.getScannedSymbol()}'`;
+    if (this.panelWriteSymbol) this.panelWriteSymbol.textContent = action.write || '-';
+    if (this.panelMoveDir) {
+      this.panelMoveDir.textContent = action.dir === 'R' ? 'RIGHT' : (action.dir === 'L' ? 'LEFT' : 'HALT');
+    }
+    if (this.panelNextState) this.panelNextState.textContent = this.formatStateName(action.nextState || '-');
+    if (this.panelExecStatus) this.panelExecStatus.textContent = this.tm.status;
+
+    // Prominent Result Banner Update
+    if (this.tmResultBanner) {
+      if (this.tm.status === 'ACCEPTED') {
+        this.tmResultBanner.style.display = 'flex';
+        this.tmResultBanner.className = 'tm-result-banner accepted';
+        if (this.tmResultBannerIcon) this.tmResultBannerIcon.textContent = '✓';
+        if (this.tmResultBannerContent) {
+          this.tmResultBannerContent.innerHTML = `<strong>✓ ACCEPTED:</strong> String "<code>${this.activeString || 'ε'}</code>" belongs to <code>L = {aⁿbⁿ | n ≥ 1}</code>`;
+        }
+      } else if (this.tm.status === 'REJECTED') {
+        this.tmResultBanner.style.display = 'flex';
+        this.tmResultBanner.className = 'tm-result-banner rejected';
+        if (this.tmResultBannerIcon) this.tmResultBannerIcon.textContent = '✗';
+        if (this.tmResultBannerContent) {
+          this.tmResultBannerContent.innerHTML = `<strong>✗ REJECTED:</strong> String "<code>${this.activeString || 'ε'}</code>" does not belong to <code>L = {aⁿbⁿ | n ≥ 1}</code>`;
+        }
+      } else {
+        this.tmResultBanner.style.display = 'none';
+      }
+    }
 
     // Render Tape Cells
     this.tapeTrack.innerHTML = '';
@@ -860,10 +976,17 @@ class AppController {
       this.tapeTrack.appendChild(cell);
     });
 
-    // Move Tape Head Pointer smoothly
+    // Move Tape Head Pointer (Bottom) and Top Head
     const offset = 12 + (this.tm.head * cellWidth) + 16;
-    this.tapeHeadPointer.style.left = `${offset}px`;
-    this.pointerStateLabel.textContent = this.formatStateName(this.tm.state);
+    if (this.tapeTopHead) {
+      this.tapeTopHead.style.left = `${offset}px`;
+    }
+    if (this.tapeHeadPointer) {
+      this.tapeHeadPointer.style.left = `${offset}px`;
+      if (this.pointerStateLabel) {
+        this.pointerStateLabel.textContent = this.formatStateName(this.tm.state);
+      }
+    }
 
     // Auto scroll tape viewport so active cell stays in view
     const container = document.querySelector('.tape-viewport-container');
@@ -874,12 +997,14 @@ class AppController {
 
     // Explanation Box
     const lastSnapshot = this.tm.history[this.tm.history.length - 1];
-    this.tmExplText.textContent = lastSnapshot ? lastSnapshot.desc : "Turing Machine ready.";
+    if (this.tmExplText) {
+      this.tmExplText.textContent = lastSnapshot ? lastSnapshot.desc : "Turing Machine ready.";
+    }
 
     // Highlight SVG Graph Nodes & Edges
     this.updateSvgDiagram();
 
-    // Highlight Transition Table Cell
+    // Highlight Transition Table Cell & Row
     this.updateTransitionTable();
 
     // Render Trace Log
@@ -887,15 +1012,12 @@ class AppController {
   }
 
   updateSvgDiagram() {
-    // Reset all nodes and edges
     document.querySelectorAll('.graph-node').forEach(node => node.classList.remove('active'));
     document.querySelectorAll('.edge-path').forEach(edge => edge.classList.remove('active'));
 
-    // Highlight node
     const nodeEl = document.getElementById(`node-${this.tm.state}`);
     if (nodeEl) nodeEl.classList.add('active');
 
-    // Highlight active edge
     if (this.tm.currentEdgeId) {
       const edgeEl = document.getElementById(this.tm.currentEdgeId);
       if (edgeEl) edgeEl.classList.add('active');
@@ -903,7 +1025,13 @@ class AppController {
   }
 
   updateTransitionTable() {
+    document.querySelectorAll('#tmTransitionTable tr').forEach(tr => tr.classList.remove('highlight-row'));
     document.querySelectorAll('#tmTransitionTable td').forEach(td => td.classList.remove('highlight-transition'));
+
+    if (this.tm.currentRowId) {
+      const row = document.getElementById(this.tm.currentRowId);
+      if (row) row.classList.add('highlight-row');
+    }
     if (this.tm.currentTransitionId) {
       const cell = document.getElementById(this.tm.currentTransitionId);
       if (cell) cell.classList.add('highlight-transition');

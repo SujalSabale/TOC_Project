@@ -52,9 +52,11 @@
         <div class="input-group">
           <label for="stringInput">Input String $w \in \{a, b\}^*$:</label>
           <div class="input-field-wrap">
-            <input type="text" id="stringInput" value="aabb" placeholder="e.g. aabb, aaabbb, ab" autocomplete="off" spellcheck="false">
+            <input type="text" id="stringInput" value="aabb" placeholder="e.g. aaabbb, aabb, ab" autocomplete="off" spellcheck="false">
             <button class="clear-btn" id="clearInputBtn" title="Clear input">✕</button>
           </div>
+          <p class="input-instruction">Enter a string containing only <code>a</code> and <code>b</code>.</p>
+          <div id="inputValidationMsg" class="validation-msg" style="display: none;"></div>
         </div>
 
         <div class="preset-group">
@@ -65,11 +67,15 @@
             <button class="preset-btn valid" data-val="aaabbb" title="Valid: n=3">aaabbb (n=3)</button>
             <button class="preset-btn valid" data-val="aaaabbbb" title="Valid: n=4">a⁴b⁴ (n=4)</button>
             <button class="preset-btn invalid" data-val="" title="Invalid: Empty string (n=0 not in L)">ε (Empty)</button>
+            <button class="preset-btn invalid" data-val="a" title="Invalid: Single a">a</button>
+            <button class="preset-btn invalid" data-val="b" title="Invalid: Single b">b</button>
             <button class="preset-btn invalid" data-val="aab" title="Invalid: More a's than b's">aab</button>
             <button class="preset-btn invalid" data-val="abb" title="Invalid: More b's than a's">abb</button>
+            <button class="preset-btn invalid" data-val="aabbb" title="Invalid: Extra b">aabbb</button>
+            <button class="preset-btn invalid" data-val="aaabb" title="Invalid: Extra a">aaabb</button>
             <button class="preset-btn invalid" data-val="ba" title="Invalid: Wrong order">ba</button>
-            <button class="preset-btn invalid" data-val="bbaa" title="Invalid: b's before a's">bbaa</button>
-            <button class="preset-btn invalid" data-val="aba" title="Invalid: Alternating">aba</button>
+            <button class="preset-btn invalid" data-val="abab" title="Invalid: Alternating">abab</button>
+            <button class="preset-btn invalid" data-val="abc" title="Invalid: Illegal char">abc</button>
           </div>
         </div>
 
@@ -81,17 +87,20 @@
       <!-- Execution Controls -->
       <div class="playback-controls">
         <div class="btn-cluster">
-          <button class="btn btn-action" id="btnPlayPause" title="Play / Pause automatic execution">
-            <span id="playIcon">▶</span> <span id="playText">Play</span>
+          <button class="btn btn-primary" id="btnRunTM" title="Automatically execute the Turing Machine step-by-step">
+            <span id="runIcon">▶</span> <span id="runText">Run TM</span>
           </button>
-          <button class="btn btn-action" id="btnStepFwd" title="Execute next single transition step">
+          <button class="btn btn-action" id="btnStepFwd" title="Execute exactly ONE transition step">
             <span>⏭</span> Step
+          </button>
+          <button class="btn btn-action" id="btnPause" title="Stop / Pause automatic execution">
+            <span>⏸</span> Pause
+          </button>
+          <button class="btn btn-action" id="btnReset" title="Restore initial configuration">
+            <span>↻</span> Reset
           </button>
           <button class="btn btn-action" id="btnStepBack" title="Undo / Step backward">
             <span>⏮</span> Step Back
-          </button>
-          <button class="btn btn-action" id="btnReset" title="Reset simulator to initial state">
-            <span>🔁</span> Reset
           </button>
           <button class="btn btn-action" id="btnFastRun" title="Instant run to completion">
             <span>⏩</span> Complete Run
@@ -126,28 +135,52 @@
             </div>
           </div>
 
-          <!-- Live State Banner -->
-          <div class="state-metrics-bar">
-            <div class="metric-box">
-              <span class="metric-label">CURRENT STATE</span>
-              <span class="metric-value highlight-state" id="tmCurrentState">q₀</span>
-            </div>
-            <div class="metric-box">
-              <span class="metric-label">HEAD SCANNED SYMBOL</span>
-              <span class="metric-value" id="tmScannedSymbol">a</span>
-            </div>
-            <div class="metric-box">
-              <span class="metric-label">HEAD POSITION</span>
-              <span class="metric-value" id="tmHeadIndex">0</span>
-            </div>
-            <div class="metric-box">
-              <span class="metric-label">NEXT PLANNED ACTION</span>
-              <span class="metric-value font-mono" id="tmPlannedAction">δ(q₀, a) → (q₁, X, R)</span>
+          <!-- Prominent Accept / Reject Result Banner -->
+          <div class="tm-result-banner" id="tmResultBanner" style="display: none;">
+            <div class="result-banner-icon" id="tmResultBannerIcon">✓</div>
+            <div class="result-banner-content" id="tmResultBannerContent">
+              <!-- Populated dynamically -->
             </div>
           </div>
 
-          <!-- Tape Container -->
+          <!-- Prominent Current State & Transition Panel -->
+          <div class="tm-prominent-status-panel">
+            <div class="status-panel-grid">
+              <div class="panel-item state-item">
+                <span class="panel-label">Current State</span>
+                <span class="panel-val highlight-state" id="panelCurrentState">q₀</span>
+              </div>
+              <div class="panel-item symbol-item">
+                <span class="panel-label">Scanned Symbol</span>
+                <span class="panel-val font-mono" id="panelScannedSymbol">a</span>
+              </div>
+              <div class="panel-item write-item">
+                <span class="panel-label">Write</span>
+                <span class="panel-val font-mono" id="panelWriteSymbol">X</span>
+              </div>
+              <div class="panel-item move-item">
+                <span class="panel-label">Move</span>
+                <span class="panel-val" id="panelMoveDir">RIGHT</span>
+              </div>
+              <div class="panel-item next-state-item">
+                <span class="panel-label">Next State</span>
+                <span class="panel-val highlight-next" id="panelNextState">q₁</span>
+              </div>
+              <div class="panel-item exec-status-item">
+                <span class="panel-label">Execution Status</span>
+                <span class="panel-val" id="panelExecStatus">READY</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tape Container with Top Head Indicator & Bottom Pointer -->
           <div class="tape-viewport-container">
+            <div class="tape-top-head-track">
+              <div class="tape-top-head" id="tapeTopHead">
+                <span class="head-text">HEAD</span>
+                <span class="head-arrow">↓</span>
+              </div>
+            </div>
             <div class="tape-ruler" id="tapeRuler"></div>
             <div class="tape-track" id="tapeTrack">
               <!-- Tape cells dynamically injected -->
@@ -255,9 +288,15 @@
 
                 <!-- State q_accept (Double Circle) -->
                 <g id="node-q_accept" class="graph-node accept-node">
-                  <circle cx="705" cy="100" r="22" class="node-circle" />
-                  <circle cx="705" cy="100" r="18" class="node-circle inner" />
-                  <text cx="705" cy="100" class="node-text">q_acc</text>
+                  <circle cx="705" cy="80" r="22" class="node-circle" />
+                  <circle cx="705" cy="80" r="18" class="node-circle inner" />
+                  <text cx="705" cy="80" class="node-text">q_acc</text>
+                </g>
+
+                <!-- State q_reject (Reject Node) -->
+                <g id="node-q_reject" class="graph-node reject-node">
+                  <circle cx="705" cy="160" r="22" class="node-circle reject-circle" />
+                  <text cx="705" cy="160" class="node-text">q_rej</text>
                 </g>
               </svg>
             </div>

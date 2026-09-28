@@ -339,6 +339,42 @@ h1, h2, h3, h4 {
   color: var(--text-main);
 }
 
+.input-instruction {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.input-instruction code {
+  color: var(--accent-cyan);
+  background: rgba(0, 240, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.validation-msg {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.84rem;
+  font-weight: 600;
+  animation: fadeIn 0.2s ease-in;
+}
+
+.validation-msg.error {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid var(--accent-rose);
+  color: #fda4af;
+}
+
+.validation-msg.info {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid var(--accent-cyan);
+  color: #7dd3fc;
+}
+
 .preset-group {
   flex: 3 1 450px;
 }
@@ -593,6 +629,102 @@ h1, h2, h3, h4 {
 }
 
 /* ==========================================================================
+   Prominent Accept / Reject Result Banner
+   ========================================================================== */
+.tm-result-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  font-family: var(--font-heading);
+  font-size: 1.12rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  animation: bannerPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes bannerPop {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.tm-result-banner.accepted {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.22), rgba(5, 150, 105, 0.3));
+  border: 2px solid var(--accent-emerald);
+  color: #6ee7b7;
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.35);
+}
+
+.tm-result-banner.rejected {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.22), rgba(225, 29, 72, 0.3));
+  border: 2px solid var(--accent-rose);
+  color: #fda4af;
+  box-shadow: 0 0 24px rgba(244, 63, 94, 0.35);
+}
+
+.result-banner-icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.result-banner-content {
+  line-height: 1.4;
+}
+
+/* ==========================================================================
+   Prominent Current State & Transition Panel
+   ========================================================================== */
+.tm-prominent-status-panel {
+  background: rgba(10, 16, 30, 0.85);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.status-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 10px;
+}
+
+.panel-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.panel-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panel-val {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.panel-val.highlight-state {
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px var(--accent-cyan-glow);
+}
+
+.panel-val.highlight-next {
+  color: var(--accent-amber);
+}
+
+/* ==========================================================================
    Turing Machine Tape Viewport
    ========================================================================== */
 .tape-viewport-container {
@@ -600,12 +732,54 @@ h1, h2, h3, h4 {
   background: #060911;
   border: 1px solid rgba(56, 189, 248, 0.3);
   border-radius: var(--radius-lg);
-  padding: 38px 20px 65px;
+  padding: 14px 20px 65px;
   overflow-x: auto;
   overflow-y: hidden;
   margin-bottom: 20px;
   box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6);
   scrollbar-width: thin;
+}
+
+.tape-top-head-track {
+  position: relative;
+  height: 38px;
+  margin-bottom: 8px;
+}
+
+.tape-top-head {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: left 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.tape-top-head .head-text {
+  background: var(--accent-cyan);
+  color: #050a14;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 0 10px var(--accent-cyan-glow);
+}
+
+.tape-top-head .head-arrow {
+  color: var(--accent-cyan);
+  font-size: 1.15rem;
+  line-height: 0.9;
+  margin-top: 1px;
+  filter: drop-shadow(0 0 4px var(--accent-cyan));
+  animation: headBob 1s infinite alternate ease-in-out;
+}
+
+@keyframes headBob {
+  from { transform: translateY(0); }
+  to { transform: translateY(3px); }
 }
 
 .tape-track {
@@ -809,6 +983,18 @@ h1, h2, h3, h4 {
   filter: drop-shadow(0 0 14px var(--accent-emerald));
 }
 
+.node-circle.reject-circle {
+  fill: #1e1115;
+  stroke: var(--accent-rose);
+}
+
+.graph-node.reject-node.active .node-circle {
+  fill: rgba(244, 63, 94, 0.35);
+  stroke: var(--accent-rose);
+  stroke-width: 4;
+  filter: drop-shadow(0 0 14px var(--accent-rose));
+}
+
 /* ==========================================================================
    Transition Tables
    ========================================================================== */
@@ -848,12 +1034,16 @@ h1, h2, h3, h4 {
   background: rgba(0, 240, 255, 0.04);
 }
 
+.transition-table tr.highlight-row {
+  background: rgba(0, 240, 255, 0.08);
+}
+
 .transition-table td.highlight-transition {
-  background: rgba(0, 240, 255, 0.25);
+  background: rgba(0, 240, 255, 0.28);
   color: #ffffff;
   font-weight: 700;
   border-radius: var(--radius-sm);
-  box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.4);
 }
 
 /* Trace Logs */
